@@ -298,6 +298,7 @@
             <div class="nav-links">
                 <a onclick="navigate('landing-view')">Inicio</a>
                 <a onclick="irATienda('All')">Tienda</a>
+                <a onclick="configurarScriptUrl()" title="Configurar conexión con Google Apps Script">⚙️ Configurar Script</a>
             </div>
             <div class="cart-info" onclick="navigate('checkout-view', null)">
                 Cesta: <span id="cart-count">0</span> artículos
@@ -498,7 +499,26 @@
         // Pega aquí la URL de tu Web App creada en Google Apps Script
         // Ejemplo: "https://script.google.com/macros/s/AKfycbx.../exec"
         // ==============================================================================
-        const GOOGLE_SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT_AQUI";
+        let GOOGLE_SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT_AQUI";
+
+        function obtenerScriptUrl() {
+            return localStorage.getItem('food4you_gas_url') || (GOOGLE_SCRIPT_URL !== "TU_URL_DE_APPS_SCRIPT_AQUI" ? GOOGLE_SCRIPT_URL : "");
+        }
+
+        function configurarScriptUrl() {
+            const actual = obtenerScriptUrl();
+            const url = prompt("Introduce la URL de tu Web App de Google Apps Script:\n(Ej: https://script.google.com/macros/s/AKfycb.../exec)", actual);
+            if (url !== null) {
+                const limpia = url.trim();
+                if (limpia) {
+                    localStorage.setItem('food4you_gas_url', limpia);
+                    alert("✅ URL de Google Apps Script guardada correctamente.");
+                } else {
+                    localStorage.removeItem('food4you_gas_url');
+                    alert("ℹ️ Se ha borrado la URL personalizada.");
+                }
+            }
+        }
 
         // Función para convertir ArrayBuffer a Base64
         function bufferToBase64(buffer) {
@@ -841,7 +861,8 @@
                 const excelBase64 = bufferToBase64(excelBuffer);
 
                 // 2. Enviar a Google Apps Script para guardar en Drive y enviar correo
-                if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== "TU_URL_DE_APPS_SCRIPT_AQUI") {
+                const scriptUrl = obtenerScriptUrl();
+                if (scriptUrl) {
                     if (btnSubmit) btnSubmit.innerHTML = "✉️ Enviando correo y guardando en Drive...";
                     const payload = {
                         clientName: currentOrder.client.nombre,
@@ -857,7 +878,7 @@
                         excelBase64: excelBase64
                     };
 
-                    await fetch(GOOGLE_SCRIPT_URL, {
+                    await fetch(scriptUrl, {
                         method: "POST",
                         headers: { "Content-Type": "text/plain;charset=utf-8" },
                         body: JSON.stringify(payload)
