@@ -282,6 +282,9 @@
             .float-chip.fc2 { right: 0; }
         }
     </style>
+    <!-- Leaflet para el mapa interactivo de entrega y cálculo de ruta -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 </head>
 <body>
 
@@ -296,9 +299,9 @@
                 <img data-logo alt="Food4You">
             </div>
             <div class="nav-links">
-                <a href="web/subpagina/index.html">Sobre Nosotros</a>
                 <a onclick="navigate('landing-view')">Inicio</a>
                 <a onclick="irATienda('All')">Tienda</a>
+                <a href="web/subpagina/index.html">Sobre Nosotros</a>
             </div>
             <div class="cart-info" onclick="navigate('checkout-view', null)">
                 Cesta: <span id="cart-count">0</span> artículos
@@ -407,23 +410,18 @@
                         <label for="form-tel">Teléfono</label>
                         <input type="tel" id="form-tel" class="form-control" required placeholder="+34 600 000 000" autocomplete="tel">
                     </div>
-                    <div class="form-group">
-                        <label for="form-dir">Dirección Completa</label>
-                        <input type="text" id="form-dir" class="form-control" required placeholder="Calle, Número, Piso" autocomplete="street-address">
+                    <div class="form-group" style="position: relative;">
+                        <label for="form-dir">Dirección Completa de Entrega (calle, número, ciudad o selección en mapa)</label>
+                        <input type="text" id="form-dir" class="form-control" required placeholder="Ej. Calle Sierpes 10, Sevilla" autocomplete="street-address" oninput="onAddressInput(this.value)">
+                        <div id="dir-suggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; z-index: 999; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto; display: none;"></div>
                     </div>
-                    <div style="display:flex; gap:1rem;">
-                        <div class="form-group" style="flex:1;">
-                            <label for="form-cp">Código Postal</label>
-                            <input type="text" id="form-cp" class="form-control" required autocomplete="postal-code">
-                        </div>
-                        <div class="form-group" style="flex:1;">
-                            <label for="form-city">Ciudad</label>
-                            <input type="text" id="form-city" class="form-control" required autocomplete="address-level2">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="form-country">País</label>
-                        <select id="form-country" class="form-control" required onchange="sincronizarUE()"></select>
+                    <!-- Campos de Código Postal, Ciudad y País gestionados automáticamente por el mapa y geocodificación -->
+                    <input type="hidden" id="form-cp" value="11630">
+                    <input type="hidden" id="form-city" value="Arcos de la Frontera">
+                    <input type="hidden" id="form-country" value="España">
+                    <div id="geo-detected-pill" style="font-size: 0.82rem; color: #475569; background: rgba(9, 51, 117, 0.05); padding: 0.4rem 0.8rem; border-radius: 6px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span>📍 Localidad detectada: <strong id="detected-locality-text">España</strong></span>
+                        <span id="detected-country-flag">🇪🇸</span>
                     </div>
                     <div class="form-group">
                         <div class="checkbox-row">
@@ -436,28 +434,47 @@
                 </form>
             </div>
 
-            <!-- Ticket de Compra interactivo -->
-            <div class="ticket-container">
-                <h3>🛒 Tu Ticket de Compra</h3>
-                <table class="ticket-table">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Cant.</th>
-                            <th>Base</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="ticket-body">
-                        <!-- Generado por JS -->
-                    </tbody>
-                </table>
-                <div class="ticket-totals">
-                    <p>Base Imponible: <span id="base-total">0.00</span>€</p>
-                    <p>Total IVA: <span id="iva-total">0.00</span>€</p>
-                    <p id="iva-note" class="iva-note" hidden>Sin IVA: cliente establecido fuera de la UE (exportación).</p>
-                    <h4>TOTAL A PAGAR: <span id="grand-total">0.00</span>€</h4>
-                    <div id="transport-disclaimer" style="margin-top: 1.2rem; text-align: left; font-size: 0.88rem; line-height: 1.45; padding: 0.85rem 1.1rem; border-radius: 10px; display: none;"></div>
+            <!-- Ticket de Compra y Mapa interactivo de entrega -->
+            <div style="flex: 1; min-width: min(350px, 100%); display: flex; flex-direction: column; gap: 1.5rem;">
+                <div class="ticket-container">
+                    <h3>🛒 Tu Ticket de Compra</h3>
+                    <table class="ticket-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cant.</th>
+                                <th>Base</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticket-body">
+                            <!-- Generado por JS -->
+                        </tbody>
+                    </table>
+                    <div class="ticket-totals">
+                        <p>Base Imponible: <span id="base-total">0.00</span>€</p>
+                        <p>Total IVA: <span id="iva-total">0.00</span>€</p>
+                        <p id="iva-note" class="iva-note" hidden>Sin IVA: cliente establecido fuera de la UE (exportación).</p>
+                        <h4>TOTAL A PAGAR: <span id="grand-total">0.00</span>€</h4>
+                        <div id="transport-disclaimer" style="margin-top: 1.2rem; text-align: left; font-size: 0.88rem; line-height: 1.45; padding: 0.85rem 1.1rem; border-radius: 10px; display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Mapa interactivo situado debajo del Ticket de Compra -->
+                <div class="ticket-container" id="map-section" style="border-top: 8px solid var(--primary-yellow); padding: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; border-bottom: 2px dashed #ccc; padding-bottom: 0.8rem;">
+                        <h3 style="margin: 0; color: var(--primary-blue); font-size: 1.15rem;">📍 Mapa y Ruta de Entrega</h3>
+                        <span id="route-km-pill" style="font-size: 0.82rem; font-weight: 600; background: rgba(9, 51, 117, 0.08); padding: 0.35rem 0.75rem; border-radius: 15px; color: var(--primary-blue);">
+                            Calculando ruta...
+                        </span>
+                    </div>
+                    <p style="font-size: 0.82rem; color: #64748b; margin: 0 0 0.8rem 0;">
+                        Introduce tu dirección arriba o haz clic en el mapa para ubicar el punto de entrega desde nuestro almacén central.
+                    </p>
+                    <div id="interactive-map" style="width: 100%; height: 260px; border-radius: 10px; border: 1px solid #cbd5e1; z-index: 1;"></div>
+                    <div id="route-summary" style="margin-top: 1rem; font-size: 0.88rem; line-height: 1.55; color: #334155; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.9rem 1.1rem;">
+                        <!-- Información en vivo de origen, destino, km y coste estimado -->
+                    </div>
                 </div>
             </div>
 
@@ -787,6 +804,13 @@
                     oldView.classList.add('hidden-section');
                     newView.classList.remove('hidden-section');
                     if (category) renderProducts(category);
+                    if (viewId === 'checkout-view') {
+                        setTimeout(() => {
+                            inicializarMapaInteractivo();
+                            if (deliveryMap) deliveryMap.invalidateSize();
+                            actualizarDesgloseTransporte();
+                        }, 100);
+                    }
                     void newView.offsetWidth;
                     newView.style.opacity = '1';
                     currentView = viewId;
@@ -850,6 +874,7 @@
                 pedidoNum: `P-${num.year}-${num.seq}`,
                 albaranNum: `A-${num.year}-${num.seq}`,
                 facturaNum: `F-${num.year}-${num.seq}`,
+                distanciaKm: currentRouteKm || 50.0,
                 items: cart.map(i => ({ product: i.product, qty: i.qty }))
             };
 
@@ -947,6 +972,297 @@
         const FMT_FECHA = 'dd/mm/yyyy';
 
         // Totales con la misma lógica que la plantilla: IVA calculado por tipo sobre la base de ese tipo
+
+        // ==============================================================================
+        // TARIFAS OFICIALES SPEED PRESS Y CÁLCULO DE TRANSPORTE
+        // Origen permanente: C. Granadillos, 11630 Arcos de la Frontera, Cádiz
+        // ==============================================================================
+        const ORIGEN_COORDS = [36.7486, -5.8115];
+        const ORIGEN_NOMBRE = "C. Granadillos, 11630 Arcos de la Frontera, Cádiz";
+
+        const TARIFAS_SPEED_PRESS = [
+            { dKm: 0.0, hKm: 100.0, dKg: 0.0, hKg: 1000.0, unit: 48.0, minPrice: 18.3 },
+            { dKm: 0.0, hKm: 100.0, dKg: 1000.0, hKg: 3000.0, unit: 432.0, minPrice: 18.4 },
+            { dKm: 0.0, hKm: 100.0, dKg: 3000.0, hKg: 5000.0, unit: 384.0, minPrice: 18.5 },
+            { dKm: 0.0, hKm: 100.0, dKg: 5000.0, hKg: 15000.0, unit: 336.0, minPrice: 18.6 },
+            { dKm: 0.0, hKm: 100.0, dKg: 15000.0, hKg: 24000.0, unit: 288.0, minPrice: 18.7 },
+            { dKm: 100.0, hKm: 150.0, dKg: 0.0, hKg: 1000.0, unit: 208.0, minPrice: 21.03 },
+            { dKm: 100.0, hKm: 150.0, dKg: 1000.0, hKg: 3000.0, unit: 48.0, minPrice: 21.03 },
+            { dKm: 100.0, hKm: 150.0, dKg: 3000.0, hKg: 5000.0, unit: 44.0, minPrice: 21.03 },
+            { dKm: 100.0, hKm: 150.0, dKg: 5000.0, hKg: 15000.0, unit: 0.04, minPrice: 21.03 },
+            { dKm: 100.0, hKm: 150.0, dKg: 15000.0, hKg: 24000.0, unit: 36.0, minPrice: 21.03 },
+            { dKm: 150.0, hKm: 200.0, dKg: 0.0, hKg: 1000.0, unit: 224.0, minPrice: 24.05 },
+            { dKm: 150.0, hKm: 200.0, dKg: 1000.0, hKg: 3000.0, unit: 56.0, minPrice: 24.06 },
+            { dKm: 150.0, hKm: 200.0, dKg: 3000.0, hKg: 5000.0, unit: 52.0, minPrice: 24.07 },
+            { dKm: 150.0, hKm: 200.0, dKg: 5000.0, hKg: 15000.0, unit: 48.0, minPrice: 24.08 },
+            { dKm: 150.0, hKm: 200.0, dKg: 15000.0, hKg: 24000.0, unit: 44.0, minPrice: 24.09 },
+            { dKm: 200.0, hKm: 250.0, dKg: 0.0, hKg: 1000.0, unit: 0.24, minPrice: 27.06 },
+            { dKm: 200.0, hKm: 250.0, dKg: 1000.0, hKg: 3000.0, unit: 64.0, minPrice: 27.07 },
+            { dKm: 200.0, hKm: 250.0, dKg: 3000.0, hKg: 5000.0, unit: 0.06, minPrice: 27.08 },
+            { dKm: 200.0, hKm: 250.0, dKg: 5000.0, hKg: 15000.0, unit: 56.0, minPrice: 27.09 },
+            { dKm: 200.0, hKm: 250.0, dKg: 15000.0, hKg: 24000.0, unit: 52.0, minPrice: 27.1 },
+            { dKm: 250.0, hKm: 350.0, dKg: 0.0, hKg: 1000.0, unit: 256.0, minPrice: 30.06 },
+            { dKm: 250.0, hKm: 350.0, dKg: 1000.0, hKg: 3000.0, unit: 0.08, minPrice: 30.07 },
+            { dKm: 250.0, hKm: 350.0, dKg: 3000.0, hKg: 5000.0, unit: 72.0, minPrice: 30.08 },
+            { dKm: 250.0, hKm: 350.0, dKg: 5000.0, hKg: 15000.0, unit: 64.0, minPrice: 30.09 },
+            { dKm: 250.0, hKm: 350.0, dKg: 15000.0, hKg: 24000.0, unit: 56.0, minPrice: 30.1 },
+            { dKm: 350.0, hKm: 500.0, dKg: 0.0, hKg: 1000.0, unit: 272.0, minPrice: 33.07 },
+            { dKm: 350.0, hKm: 500.0, dKg: 1000.0, hKg: 3000.0, unit: 96.0, minPrice: 33.08 },
+            { dKm: 350.0, hKm: 500.0, dKg: 3000.0, hKg: 5000.0, unit: 88.0, minPrice: 33.09 },
+            { dKm: 350.0, hKm: 500.0, dKg: 5000.0, hKg: 15000.0, unit: 0.08, minPrice: 33.1 },
+            { dKm: 350.0, hKm: 500.0, dKg: 15000.0, hKg: 24000.0, unit: 72.0, minPrice: 33.11 },
+            { dKm: 500.0, hKm: 750.0, dKg: 0.0, hKg: 1000.0, unit: 288.0, minPrice: 36.07 },
+            { dKm: 500.0, hKm: 750.0, dKg: 1000.0, hKg: 3000.0, unit: 112.0, minPrice: 36.08 },
+            { dKm: 500.0, hKm: 750.0, dKg: 3000.0, hKg: 5000.0, unit: 96.0, minPrice: 36.09 },
+            { dKm: 500.0, hKm: 750.0, dKg: 5000.0, hKg: 15000.0, unit: 88.0, minPrice: 36.1 },
+            { dKm: 500.0, hKm: 750.0, dKg: 15000.0, hKg: 24000.0, unit: 0.08, minPrice: 36.11 },
+            { dKm: 750.0, hKm: 1000.0, dKg: 0.0, hKg: 1000.0, unit: 304.0, minPrice: 39.08 },
+            { dKm: 750.0, hKm: 1000.0, dKg: 1000.0, hKg: 3000.0, unit: 128.0, minPrice: 39.09 },
+            { dKm: 750.0, hKm: 1000.0, dKg: 3000.0, hKg: 5000.0, unit: 0.12, minPrice: 39.1 },
+            { dKm: 750.0, hKm: 1000.0, dKg: 5000.0, hKg: 15000.0, unit: 112.0, minPrice: 39.11 },
+            { dKm: 750.0, hKm: 1000.0, dKg: 15000.0, hKg: 24000.0, unit: 96.0, minPrice: 39.12 },
+            { dKm: 1000.0, hKm: 1500.0, dKg: 0.0, hKg: 1000.0, unit: 0.32, minPrice: 42.08 },
+            { dKm: 1000.0, hKm: 1500.0, dKg: 1000.0, hKg: 3000.0, unit: 144.0, minPrice: 42.09 },
+            { dKm: 1000.0, hKm: 1500.0, dKg: 3000.0, hKg: 5000.0, unit: 136.0, minPrice: 42.1 },
+            { dKm: 1000.0, hKm: 1500.0, dKg: 5000.0, hKg: 15000.0, unit: 128.0, minPrice: 42.11 },
+            { dKm: 1000.0, hKm: 1500.0, dKg: 15000.0, hKg: 24000.0, unit: 0.12, minPrice: 42.12 },
+            { dKm: 1500.0, hKm: 25000.0, dKg: 0.0, hKg: 1000.0, unit: 336.0, minPrice: 45.09 },
+            { dKm: 1500.0, hKm: 25000.0, dKg: 1000.0, hKg: 3000.0, unit: 0.16, minPrice: 45.1 },
+            { dKm: 1500.0, hKm: 25000.0, dKg: 3000.0, hKg: 5000.0, unit: 384.0, minPrice: 45.11 },
+            { dKm: 1500.0, hKm: 25000.0, dKg: 5000.0, hKg: 15000.0, unit: 336.0, minPrice: 45.12 },
+            { dKm: 1500.0, hKm: 25000.0, dKg: 15000.0, hKg: 24000.0, unit: 288.0, minPrice: 45.13 },
+        ];
+
+        function calcularTarifaSpeedPress(distanciaKm, pesoKg, volM3, bultos, totalConIva) {
+            const km = Math.max(1, Number(distanciaKm) || 50.0);
+            const pReal = Number(pesoKg) || 0.0;
+            const pVol = (Number(volM3) || 0.0) * 250.0; // 1 m³ = 250 kg
+            const pesoTasable = Math.max(pReal, pVol);
+
+            if (Number(totalConIva) >= 500.0) {
+                return {
+                    gratis: true,
+                    coste: 0.0,
+                    km: km,
+                    pesoTasable: Number(pesoTasable.toFixed(2)),
+                    mensaje: "¡Transporte gratuito incluido por superar 500 € con IVA!"
+                };
+            }
+
+            let tramo = null;
+            for (let i = 0; i < TARIFAS_SPEED_PRESS.length; i++) {
+                const t = TARIFAS_SPEED_PRESS[i];
+                if (km >= t.dKm && (km <= t.hKm || t.hKm >= 25000)) {
+                    if (pesoTasable >= t.dKg && (pesoTasable <= t.hKg || t.hKg >= 24000)) {
+                        tramo = t;
+                        break;
+                    }
+                    if (!tramo) tramo = t;
+                }
+            }
+            if (!tramo) tramo = TARIFAS_SPEED_PRESS[0];
+
+            let rawCost = 0.0;
+            if (tramo.unit >= 1.0) {
+                rawCost = (tramo.unit / 1000.0) * pesoTasable; // Tarifa por tonelada
+            } else {
+                rawCost = tramo.unit * pesoTasable; // Tarifa por kg
+            }
+            const coste = Math.max(tramo.minPrice, rawCost);
+
+            return {
+                gratis: false,
+                coste: Number(coste.toFixed(2)),
+                km: Number(km.toFixed(1)),
+                pesoTasable: Number(pesoTasable.toFixed(2)),
+                tramo: tramo,
+                mensaje: `Tarifa Speed Press: ${coste.toFixed(2)} € (${km.toFixed(1)} km, tramo ${tramo.dKm}-${tramo.hKm} km)`
+            };
+        }
+
+        // Variables de estado del mapa interactivo
+        let deliveryMap = null;
+        let originMarker = null;
+        let destMarker = null;
+        let routePolyline = null;
+        let currentRouteKm = 50.0;
+        let currentDestCoords = [37.3891, -5.9845]; // Por defecto Sevilla
+        let currentAddressText = "Sevilla, España";
+
+        function inicializarMapaInteractivo() {
+            const mapEl = document.getElementById('interactive-map');
+            if (!mapEl || deliveryMap || typeof L === 'undefined') return;
+
+            deliveryMap = L.map('interactive-map').setView(ORIGEN_COORDS, 8);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(deliveryMap);
+
+            // Marcador del almacén central en Arcos de la Frontera
+            originMarker = L.marker(ORIGEN_COORDS).addTo(deliveryMap)
+                .bindPopup("<b>Almacén Central Food4You</b><br>C. Granadillos, Arcos de la Frontera, Cádiz")
+                .openPopup();
+
+            // Marcador de destino
+            destMarker = L.marker(currentDestCoords, { draggable: true }).addTo(deliveryMap)
+                .bindPopup("<b>Punto de entrega</b>");
+
+            destMarker.on('dragend', function (e) {
+                const pos = e.target.getLatLng();
+                actualizarRutaCoordenadas([pos.lat, pos.lng], true);
+            });
+
+            deliveryMap.on('click', function (e) {
+                actualizarRutaCoordenadas([e.latlng.lat, e.latlng.lng], true);
+            });
+
+            actualizarRutaCoordenadas(currentDestCoords, false);
+        }
+
+        // Cálculo de distancia ortodrómica ajustada por factor de carretera (x1.25)
+        function calcularDistanciaKm(coords1, coords2) {
+            const R = 6371; // Radio de la Tierra en km
+            const dLat = (coords2[0] - coords1[0]) * Math.PI / 180;
+            const dLon = (coords2[1] - coords1[1]) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(coords1[0] * Math.PI / 180) * Math.cos(coords2[0] * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distanciaLineaRecta = R * c;
+            // Factor estimado de carretera 1.25
+            return Math.max(1, Number((distanciaLineaRecta * 1.25).toFixed(1)));
+        }
+
+        function actualizarRutaCoordenadas(coords, hacerReverseGeocode = false) {
+            currentDestCoords = coords;
+            if (destMarker) destMarker.setLatLng(coords);
+
+            // Trazar línea de ruta
+            if (routePolyline && deliveryMap) deliveryMap.removeLayer(routePolyline);
+            if (deliveryMap) {
+                routePolyline = L.polyline([ORIGEN_COORDS, coords], { color: '#093375', weight: 4, dashArray: '8, 8' }).addTo(deliveryMap);
+                deliveryMap.fitBounds(L.latLngBounds([ORIGEN_COORDS, coords]), { padding: [30, 30] });
+            }
+
+            // Calcular distancia en km
+            currentRouteKm = calcularDistanciaKm(ORIGEN_COORDS, coords);
+
+            if (hacerReverseGeocode) {
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords[0]}&lon=${coords[1]}&addressdetails=1`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.address) {
+                            const addr = data.address;
+                            const road = addr.road || addr.pedestrian || addr.suburb || '';
+                            const city = addr.city || addr.town || addr.village || addr.municipality || 'Cádiz';
+                            const cp = addr.postcode || '11000';
+                            const country = addr.country || 'España';
+                            const fullAddr = data.display_name.split(',').slice(0, 3).join(',');
+                            
+                            document.getElementById('form-dir').value = fullAddr;
+                            document.getElementById('form-cp').value = cp;
+                            document.getElementById('form-city').value = city;
+                            document.getElementById('form-country').value = country;
+
+                            sincronizarPaisDetectado(country);
+                        }
+                    })
+                    .catch(() => {})
+                    .finally(() => {
+                        actualizarDesgloseTransporte();
+                    });
+            } else {
+                actualizarDesgloseTransporte();
+            }
+        }
+
+        let searchAddressTimer = null;
+        function onAddressInput(val) {
+            clearTimeout(searchAddressTimer);
+            if (!val || val.trim().length < 3) return;
+            searchAddressTimer = setTimeout(() => {
+                buscarDireccionGeocode(val.trim());
+            }, 500);
+        }
+
+        function buscarDireccionGeocode(query) {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=1`)
+                .then(res => res.json())
+                .then(results => {
+                    if (results && results.length > 0) {
+                        const r = results[0];
+                        const lat = parseFloat(r.lat);
+                        const lon = parseFloat(r.lon);
+                        const addr = r.address || {};
+                        const city = addr.city || addr.town || addr.village || addr.municipality || 'Ciudad';
+                        const cp = addr.postcode || '11000';
+                        const country = addr.country || 'España';
+
+                        document.getElementById('form-cp').value = cp;
+                        document.getElementById('form-city').value = city;
+                        document.getElementById('form-country').value = country;
+
+                        sincronizarPaisDetectado(country);
+                        actualizarRutaCoordenadas([lat, lon], false);
+                    }
+                })
+                .catch(() => {});
+        }
+
+        function sincronizarPaisDetectado(country) {
+            const isEu = EU_COUNTRIES.some(p => p.toLowerCase() === country.toLowerCase()) || country.toLowerCase().includes('españa') || country.toLowerCase().includes('spain');
+            const chk = document.getElementById('form-eu');
+            if (chk) {
+                chk.checked = isEu;
+            }
+            const pillLoc = document.getElementById('detected-locality-text');
+            if (pillLoc) pillLoc.textContent = `${document.getElementById('form-city').value} (${country})`;
+            const flagLoc = document.getElementById('detected-country-flag');
+            if (flagLoc) flagLoc.textContent = isEu ? '🇪🇺' : '🌐';
+            updateTicket();
+        }
+
+        function actualizarDesgloseTransporte() {
+            const inEU = isEU();
+            const t = calcTotals(cart, inEU);
+            const info = calcularTarifaSpeedPress(currentRouteKm, t.totalWeight, t.totalVol, t.totalBultos, t.total);
+
+            const pill = document.getElementById('route-km-pill');
+            if (pill) {
+                pill.textContent = `${info.km.toFixed(1)} km`;
+                pill.style.background = info.gratis ? 'rgba(46, 125, 50, 0.12)' : 'rgba(9, 51, 117, 0.08)';
+                pill.style.color = info.gratis ? '#1b5e20' : '#093375';
+            }
+
+            const sumBox = document.getElementById('route-summary');
+            if (sumBox) {
+                if (info.gratis) {
+                    sumBox.innerHTML = `
+                        <div style="color: #1b5e20; font-weight: bold; margin-bottom: 4px;">🎉 ¡Transporte GRATUITO Incluido!</div>
+                        <div>Ruta calculada: <strong>${info.km.toFixed(1)} km</strong> desde C. Granadillos (Arcos de la Frontera, Cádiz).</div>
+                        <div style="font-size: 0.8rem; color: #2e7d32; margin-top: 4px;">Al superar los 500,00 € con IVA, los costes logísticos corren por cuenta de Food4You.</div>
+                    `;
+                } else {
+                    sumBox.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>Distancia menor estimada:</span> <strong>${info.km.toFixed(1)} km</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>Mercancía en cesta:</span> <span>${t.totalBultos} bultos · ${t.totalWeight.toFixed(2)} kg · ${t.totalVol.toFixed(3)} m³</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>Peso tasable (regla de 3):</span> <span>${info.pesoTasable.toFixed(2)} kg</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #cbd5e1; font-weight: bold; color: #093375; font-size: 0.95rem;">
+                            <span>Coste de transporte estimado (Speed Press):</span> <span>${info.coste.toFixed(2)} €</span>
+                        </div>
+                        <div style="font-size: 0.78rem; color: #7a5a00; margin-top: 5px;">⚠️ Gastos no incluidos en el pago de la web al ser inferior a 500 € IVA incl.</div>
+                    `;
+                }
+            }
+        }
+
         function calcTotals(items, inEU) {
             const lines = items.map(item => {
                 const base = round2(item.product.price * item.qty);
@@ -1065,21 +1381,44 @@
             A.getCell('H19').font = { bold: true, size: 9 };
             A.getCell('I19').font = { bold: true, size: 9 };
 
+            // Cálculo de tarifa Speed Press con km calculados
+            const kmAlbaran = o.distanciaKm || currentRouteKm || 50.0;
+            const infoTrans = calcularTarifaSpeedPress(kmAlbaran, t.totalWeight, t.totalVol, t.totalBultos, t.total);
+
             for (let i = 0; i < MAX_LINEAS; i++) {
                 const r = FILA_INI + i;
                 const l = t.lines[i];
                 try { A.unmergeCells(`H${r}:I${r}`); } catch (e) {}
-                fx(A, `B${r}`, `IF(C${r}="","",ROW()-19)`, l ? i + 1 : '');
-                fx(A, `C${r}`, `IF(Pedido!C${r}="","",Pedido!C${r})`, l ? l.product.name.trim() : '');
-                fx(A, `D${r}`, `IF(Pedido!D${r}="","",Pedido!D${r})`, l ? l.qty : '');
-                set(A, `E${r}`, l ? l.qty : null);   // Entregado
-                fx(A, `F${r}`, `IF(D${r}="","",D${r}-N(E${r}))`, l ? 0 : '');
-                set(A, `G${r}`, l ? l.bultos : null); // Bultos
-                set(A, `H${r}`, l ? l.weight : null); // Peso (kg)
-                set(A, `I${r}`, l ? l.vol : null);    // Volumen (m³)
+
                 if (l) {
+                    fx(A, `B${r}`, `IF(C${r}="","",ROW()-19)`, i + 1);
+                    // Concepto con el Peso (Kg) añadido al nombre
+                    const pesoUnitStr = (l.product.weight && l.product.weight > 0) ? ` (${l.product.weight} kg)` : '';
+                    const conceptoConPeso = l.product.name.trim() + pesoUnitStr;
+                    set(A, `C${r}`, conceptoConPeso);
+                    fx(A, `D${r}`, `IF(Pedido!D${r}="","",Pedido!D${r})`, l.qty);
+                    set(A, `E${r}`, l.qty);   // Entregado
+                    fx(A, `F${r}`, `IF(D${r}="","",D${r}-N(E${r}))`, 0);
+                    set(A, `G${r}`, l.bultos); // Bultos
+                    set(A, `H${r}`, l.weight); // Peso (kg)
+                    set(A, `I${r}`, l.vol);    // Volumen (m³)
                     A.getCell(`H${r}`).numFmt = '#,##0.00';
                     A.getCell(`I${r}`).numFmt = '#,##0.000';
+                } else if (i === t.lines.length && t.lines.length < MAX_LINEAS) {
+                    // Línea adicional en la tabla de productos del Albarán reflejando el transporte
+                    set(A, `B${r}`, i + 1);
+                    const descTransFila = t.total >= 500
+                        ? "Transporte gratuito incluido (Pedido >= 500 €)"
+                        : `Gastos de transporte estimados (Speed Press · ${infoTrans.km.toFixed(1)} km · ${infoTrans.coste.toFixed(2)} €)`;
+                    set(A, `C${r}`, descTransFila);
+                    set(A, `D${r}`, 1);
+                    set(A, `E${r}`, 1);
+                    set(A, `F${r}`, 0);
+                    set(A, `G${r}`, 0);
+                    set(A, `H${r}`, null);
+                    set(A, `I${r}`, null);
+                } else {
+                    ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].forEach(col => set(A, `${col}${r}`, null));
                 }
             }
             const totQty = o.items.reduce((s, i) => s + i.qty, 0);
@@ -1092,16 +1431,19 @@
             A.getCell('H32').numFmt = '#,##0.00';
             A.getCell('I32').numFmt = '#,##0.000';
 
-            // Observaciones de entrega
+            // Observaciones de entrega con desglose de ruta y precio estimado
             const obsA = t.total >= 500
-                ? "Mercancía entregada en perfecto estado. Transporte gratuito incluido por superar 500,00 € con IVA."
-                : "Mercancía entregada en perfecto estado. Gastos de transporte no incluidos (pedido inferior a 500,00 € con IVA).";
+                ? `Mercancía entregada en perfecto estado. Transporte gratuito incluido por superar 500,00 € con IVA (0,00 €). Distancia calculada: ${infoTrans.km.toFixed(1)} km desde C. Granadillos, 11630 Arcos de la Frontera (Cádiz).`
+                : `Mercancía entregada en perfecto estado. Gastos de transporte estimados: ${infoTrans.coste.toFixed(2)} € (Ruta calculada: ${infoTrans.km.toFixed(1)} km desde C. Granadillos, Arcos de la Frontera, Cádiz · ${t.totalBultos} bultos · ${t.totalWeight.toFixed(2)} kg · ${t.totalVol.toFixed(3)} m³ · Peso tasable: ${infoTrans.pesoTasable.toFixed(2)} kg según tarifas Speed Press). Gastos de transporte no incluidos en el pedido web.`;
             set(A, 'B35', obsA);
 
             // Disclaimer dinámico en B44 vinculado al total del Pedido (Pedido!$I$38)
+            const textoDisc = t.total >= 500
+                ? "Albarán sin valorar · Transporte gratuito incluido."
+                : `Albarán sin valorar: Gastos de transporte estimados (${infoTrans.coste.toFixed(2)} €) no incluidos (pedido inferior a 500,00 € con IVA).`;
             fx(A, 'B44',
-                'IF(Pedido!$I$38>=500,"Albarán sin valorar · Transporte gratuito incluido.","Albarán sin valorar: Gastos de transporte no incluidos (pedido inferior a 500,00 € con IVA).")',
-                t.total >= 500 ? "Albarán sin valorar · Transporte gratuito incluido." : "Albarán sin valorar: Gastos de transporte no incluidos (pedido inferior a 500,00 € con IVA)."
+                `IF(Pedido!$I$38>=500,"Albarán sin valorar · Transporte gratuito incluido.","Albarán sin valorar: Gastos de transporte estimados (${infoTrans.coste.toFixed(2)} €) no incluidos (pedido inferior a 500,00 € con IVA).")`,
+                textoDisc
             );
 
             set(A, 'B48', 'Cómo usarla: concepto y cantidad pedida se traen de la hoja Pedido; bultos, peso y volumen de almacén. Documento generado automáticamente desde la web de Food4You.');
