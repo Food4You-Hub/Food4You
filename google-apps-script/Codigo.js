@@ -3,29 +3,96 @@
  * Food4You · Breathe Taste Innovate
  * Backend en Google Apps Script
  * ==============================================================================
- * Este script realiza dos tareas clave cuando un cliente realiza una compra:
- * 1. Guarda el archivo Excel (.xlsx) en la carpeta de Google Drive "Ventas por Web".
- * 2. Envía un correo electrónico al cliente desde tu cuenta con el Excel adjunto.
+ * Funcionalidades principales:
+ * 1. Guarda el archivo Excel (.xlsx) en Google Drive en la carpeta "Ventas por Web".
+ * 2. Cálculo de transporte con Google Maps (ruta más corta en km) desde el origen fijo:
+ *    "C. Granadillos, 11630 Arcos de la Frontera, Cádiz".
+ * 3. Aplicación de tabla de tarifas (Speed Press) con peso (kg), volumen (m³) y bultos.
+ *    - Si el pedido es >= 500,00 € IVA incluido: TRANSPORTE GRATUITO (se omite cálculo).
+ *    - Si el pedido es < 500,00 € IVA incluido: se calcula según distancia y peso tasable.
+ * 4. Envío automático de correo al cliente con Excel adjunto y desglose de transporte.
  * ==============================================================================
  */
 
-// Nombre exacto de la carpeta en Google Drive donde se almacenan las ventas
+// Origen permanente de todos los envíos
+const ORIGEN_ENVIO = "C. Granadillos, 11630 Arcos de la Frontera, Cádiz";
+
+// Umbral para transporte gratuito (IVA incluido)
+const UMBRAL_TRANSPORTE_GRATIS = 500.00;
+
+// Carpeta en Google Drive para guardar la documentación
 const CARPETA_DRIVE_VENTAS = "Ventas por Web";
 
+// Matriz oficial de tarifas Speed Press (50 tramos)
+const TARIFAS_SPEED_PRESS = [
+  { dKm: 0.0, hKm: 100.0, dKg: 0.0, hKg: 1000.0, unit: 48.0, minPrice: 18.3 },
+  { dKm: 0.0, hKm: 100.0, dKg: 1000.0, hKg: 3000.0, unit: 432.0, minPrice: 18.4 },
+  { dKm: 0.0, hKm: 100.0, dKg: 3000.0, hKg: 5000.0, unit: 384.0, minPrice: 18.5 },
+  { dKm: 0.0, hKm: 100.0, dKg: 5000.0, hKg: 15000.0, unit: 336.0, minPrice: 18.6 },
+  { dKm: 0.0, hKm: 100.0, dKg: 15000.0, hKg: 24000.0, unit: 288.0, minPrice: 18.7 },
+  { dKm: 100.0, hKm: 150.0, dKg: 0.0, hKg: 1000.0, unit: 208.0, minPrice: 21.03 },
+  { dKm: 100.0, hKm: 150.0, dKg: 1000.0, hKg: 3000.0, unit: 48.0, minPrice: 21.03 },
+  { dKm: 100.0, hKm: 150.0, dKg: 3000.0, hKg: 5000.0, unit: 44.0, minPrice: 21.03 },
+  { dKm: 100.0, hKm: 150.0, dKg: 5000.0, hKg: 15000.0, unit: 0.04, minPrice: 21.03 },
+  { dKm: 100.0, hKm: 150.0, dKg: 15000.0, hKg: 24000.0, unit: 36.0, minPrice: 21.03 },
+  { dKm: 150.0, hKm: 200.0, dKg: 0.0, hKg: 1000.0, unit: 224.0, minPrice: 24.05 },
+  { dKm: 150.0, hKm: 200.0, dKg: 1000.0, hKg: 3000.0, unit: 56.0, minPrice: 24.06 },
+  { dKm: 150.0, hKm: 200.0, dKg: 3000.0, hKg: 5000.0, unit: 52.0, minPrice: 24.07 },
+  { dKm: 150.0, hKm: 200.0, dKg: 5000.0, hKg: 15000.0, unit: 48.0, minPrice: 24.08 },
+  { dKm: 150.0, hKm: 200.0, dKg: 15000.0, hKg: 24000.0, unit: 44.0, minPrice: 24.09 },
+  { dKm: 200.0, hKm: 250.0, dKg: 0.0, hKg: 1000.0, unit: 0.24, minPrice: 27.06 },
+  { dKm: 200.0, hKm: 250.0, dKg: 1000.0, hKg: 3000.0, unit: 64.0, minPrice: 27.07 },
+  { dKm: 200.0, hKm: 250.0, dKg: 3000.0, hKg: 5000.0, unit: 0.06, minPrice: 27.08 },
+  { dKm: 200.0, hKm: 250.0, dKg: 5000.0, hKg: 15000.0, unit: 56.0, minPrice: 27.09 },
+  { dKm: 200.0, hKm: 250.0, dKg: 15000.0, hKg: 24000.0, unit: 52.0, minPrice: 27.1 },
+  { dKm: 250.0, hKm: 350.0, dKg: 0.0, hKg: 1000.0, unit: 256.0, minPrice: 30.06 },
+  { dKm: 250.0, hKm: 350.0, dKg: 1000.0, hKg: 3000.0, unit: 0.08, minPrice: 30.07 },
+  { dKm: 250.0, hKm: 350.0, dKg: 3000.0, hKg: 5000.0, unit: 72.0, minPrice: 30.08 },
+  { dKm: 250.0, hKm: 350.0, dKg: 5000.0, hKg: 15000.0, unit: 64.0, minPrice: 30.09 },
+  { dKm: 250.0, hKm: 350.0, dKg: 15000.0, hKg: 24000.0, unit: 56.0, minPrice: 30.1 },
+  { dKm: 350.0, hKm: 500.0, dKg: 0.0, hKg: 1000.0, unit: 272.0, minPrice: 33.07 },
+  { dKm: 350.0, hKm: 500.0, dKg: 1000.0, hKg: 3000.0, unit: 96.0, minPrice: 33.08 },
+  { dKm: 350.0, hKm: 500.0, dKg: 3000.0, hKg: 5000.0, unit: 88.0, minPrice: 33.09 },
+  { dKm: 350.0, hKm: 500.0, dKg: 5000.0, hKg: 15000.0, unit: 0.08, minPrice: 33.1 },
+  { dKm: 350.0, hKm: 500.0, dKg: 15000.0, hKg: 24000.0, unit: 72.0, minPrice: 33.11 },
+  { dKm: 500.0, hKm: 750.0, dKg: 0.0, hKg: 1000.0, unit: 288.0, minPrice: 36.07 },
+  { dKm: 500.0, hKm: 750.0, dKg: 1000.0, hKg: 3000.0, unit: 112.0, minPrice: 36.08 },
+  { dKm: 500.0, hKm: 750.0, dKg: 3000.0, hKg: 5000.0, unit: 96.0, minPrice: 36.09 },
+  { dKm: 500.0, hKm: 750.0, dKg: 5000.0, hKg: 15000.0, unit: 88.0, minPrice: 36.1 },
+  { dKm: 500.0, hKm: 750.0, dKg: 15000.0, hKg: 24000.0, unit: 0.08, minPrice: 36.11 },
+  { dKm: 750.0, hKm: 1000.0, dKg: 0.0, hKg: 1000.0, unit: 304.0, minPrice: 39.08 },
+  { dKm: 750.0, hKm: 1000.0, dKg: 1000.0, hKg: 3000.0, unit: 128.0, minPrice: 39.09 },
+  { dKm: 750.0, hKm: 1000.0, dKg: 3000.0, hKg: 5000.0, unit: 0.12, minPrice: 39.1 },
+  { dKm: 750.0, hKm: 1000.0, dKg: 5000.0, hKg: 15000.0, unit: 112.0, minPrice: 39.11 },
+  { dKm: 750.0, hKm: 1000.0, dKg: 15000.0, hKg: 24000.0, unit: 96.0, minPrice: 39.12 },
+  { dKm: 1000.0, hKm: 1500.0, dKg: 0.0, hKg: 1000.0, unit: 0.32, minPrice: 42.08 },
+  { dKm: 1000.0, hKm: 1500.0, dKg: 1000.0, hKg: 3000.0, unit: 144.0, minPrice: 42.09 },
+  { dKm: 1000.0, hKm: 1500.0, dKg: 3000.0, hKg: 5000.0, unit: 136.0, minPrice: 42.1 },
+  { dKm: 1000.0, hKm: 1500.0, dKg: 5000.0, hKg: 15000.0, unit: 128.0, minPrice: 42.11 },
+  { dKm: 1000.0, hKm: 1500.0, dKg: 15000.0, hKg: 24000.0, unit: 0.12, minPrice: 42.12 },
+  { dKm: 1500.0, hKm: 25000.0, dKg: 0.0, hKg: 1000.0, unit: 336.0, minPrice: 45.09 },
+  { dKm: 1500.0, hKm: 25000.0, dKg: 1000.0, hKg: 3000.0, unit: 0.16, minPrice: 45.1 },
+  { dKm: 1500.0, hKm: 25000.0, dKg: 3000.0, hKg: 5000.0, unit: 384.0, minPrice: 45.11 },
+  { dKm: 1500.0, hKm: 25000.0, dKg: 5000.0, hKg: 15000.0, unit: 336.0, minPrice: 45.12 },
+  { dKm: 1500.0, hKm: 25000.0, dKg: 15000.0, hKg: 24000.0, unit: 288.0, minPrice: 45.13 },
+];
+
 /**
- * Endpoint GET: Permite comprobar en el navegador que el Web App está activo.
+ * Endpoint GET: Comprobación rápida de estado desde el navegador.
  */
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
     status: "ok",
-    service: "Food4You Sales Webhook",
+    service: "Food4You Sales & Logistics Webhook",
     message: "El servicio de Food4You está funcionando correctamente.",
+    origen: ORIGEN_ENVIO,
+    umbralGratuito: UMBRAL_TRANSPORTE_GRATIS,
     timestamp: new Date().toISOString()
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
- * Endpoint POST: Recibe los datos de la compra y el archivo Excel en Base64.
+ * Endpoint POST: Procesa la compra, calcula transporte con Google Maps y envía email.
  */
 function doPost(e) {
   try {
@@ -37,15 +104,20 @@ function doPost(e) {
     try {
       data = JSON.parse(e.postData.contents);
     } catch (parseErr) {
-      // Si llega como formulario x-www-form-urlencoded
-      data = e.parameter;
+      data = e.parameter || {};
     }
 
     var clientName = data.clientName || "Cliente";
     var clientEmail = data.clientEmail;
+    var clientNif = data.clientNif || "";
+    var clientTel = data.clientTel || "";
+    var clientDireccion = data.clientDireccion || "";
     var pedidoNum = data.pedidoNum || ("P-" + new Date().getFullYear());
     var facturaNum = data.facturaNum || "";
-    var totalAmount = data.totalAmount || "0.00";
+    var totalAmount = parseFloat(data.totalAmount || "0") || 0.0;
+    var totalWeight = parseFloat(data.totalWeight || "0") || 0.0;
+    var totalVol = parseFloat(data.totalVol || "0") || 0.0;
+    var totalBultos = parseInt(data.totalBultos || "0", 10) || 0;
     var fecha = data.fecha || new Date().toLocaleDateString('es-ES');
     var excelBase64 = data.excelBase64;
     var fileName = data.fileName || ("Food4You_Documentacion_" + pedidoNum + ".xlsx");
@@ -57,26 +129,33 @@ function doPost(e) {
       throw new Error("No se ha recibido el archivo Excel en Base64.");
     }
 
-    // 1. Decodificar el archivo Excel desde Base64
+    // 1. Cálculo de Transporte con Google Maps y matriz de tarifas
+    var transporte = calcularTransporteGoogleMaps(clientDireccion, totalAmount, totalWeight, totalVol, totalBultos);
+
+    // 2. Decodificar archivo Excel desde Base64
     var excelBytes = Utilities.base64Decode(excelBase64);
     var mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     var excelBlob = Utilities.newBlob(excelBytes, mimeType, fileName);
 
-    // 2. Obtener o crear la carpeta "Ventas por Web" en Google Drive
+    // 3. Guardar en carpeta "Ventas por Web" de Google Drive
     var folder = obtenerOCrearCarpeta(CARPETA_DRIVE_VENTAS);
     var archivoDrive = folder.createFile(excelBlob);
-    archivoDrive.setDescription("Venta realizada desde la web Food4You el " + fecha + ". Pedido: " + pedidoNum + " - Cliente: " + clientName);
+    var descLogistica = transporte.gratis
+      ? "Transporte GRATIS (Pedido >= 500 €)"
+      : (transporte.distanciaKm ? transporte.distanciaKm.toFixed(1) + " km · " : "") + transporte.costeTransporte.toFixed(2) + " €";
+    archivoDrive.setDescription("Venta web " + fecha + ". Pedido: " + pedidoNum + " - Cliente: " + clientName + " - " + descLogistica);
 
-    // 3. Preparar y enviar el correo electrónico al cliente
+    // 4. Preparar y enviar correo electrónico al cliente
     var asunto = "Documentación de su compra · Pedido " + pedidoNum + " - Food4You";
     var cuerpoTexto = "Estimado/a " + clientName + ",\n\n" +
       "Muchas gracias por su compra en Food4You.\n" +
       "Le adjuntamos la documentación oficial de su pedido (Hoja de Pedido, Albarán y Factura).\n\n" +
-      "Detalles de la compra:\n" +
+      "Detalles del pedido:\n" +
       "- Pedido: " + pedidoNum + "\n" +
       (facturaNum ? "- Factura: " + facturaNum + "\n" : "") +
       "- Fecha: " + fecha + "\n" +
-      "- Total: " + totalAmount + " €\n\n" +
+      "- Total pedido: " + totalAmount.toFixed(2) + " €\n" +
+      "- Estado transporte: " + (transporte.gratis ? "GRATUITO (Pedido >= 500 €)" : "No incluido (" + transporte.costeTransporte.toFixed(2) + " € estimados)") + "\n\n" +
       "Gracias por confiar en Food4You.\n" +
       "Food4You · Breathe Taste Innovate";
 
@@ -85,8 +164,9 @@ function doPost(e) {
       pedidoNum: pedidoNum,
       facturaNum: facturaNum,
       fecha: fecha,
-      totalAmount: totalAmount,
-      fileName: fileName
+      totalAmount: totalAmount.toFixed(2),
+      fileName: fileName,
+      transporte: transporte
     });
 
     GmailApp.sendEmail(clientEmail, asunto, cuerpoTexto, {
@@ -95,11 +175,11 @@ function doPost(e) {
       attachments: [excelBlob]
     });
 
-    // 4. Responder con éxito
     return ContentService.createTextOutput(JSON.stringify({
       status: "success",
-      message: "Documentación enviada con éxito por correo y guardada en Google Drive.",
+      message: "Pedido tramitado, guardado en Drive y enviado por correo.",
       pedidoNum: pedidoNum,
+      transporte: transporte,
       driveFileId: archivoDrive.getId(),
       driveFileUrl: archivoDrive.getUrl()
     })).setMimeType(ContentService.MimeType.JSON);
@@ -114,7 +194,117 @@ function doPost(e) {
 }
 
 /**
- * Busca una carpeta por nombre en Google Drive; si no existe, la crea en la raíz.
+ * Calcula la distancia más corta con Google Maps y la tarifa de transporte Speed Press.
+ * Todo el proceso de coste se omite si el importe con IVA >= 500,00 €.
+ */
+function calcularTransporteGoogleMaps(destino, totalAmount, pesoKg, volM3, bultos) {
+  // Caso 1: Transporte GRATIS (pedido >= 500 € con IVA)
+  if (totalAmount >= UMBRAL_TRANSPORTE_GRATIS) {
+    return {
+      gratis: true,
+      costeTransporte: 0.00,
+      mensaje: "¡Transporte gratuito incluido! Su pedido supera los 500,00 € (IVA incluido).",
+      distanciaKm: null,
+      pesoKg: pesoKg,
+      volM3: volM3,
+      bultos: bultos,
+      pesoTasable: pesoKg
+    };
+  }
+
+  // Caso 2: Pedido < 500 € -> Cálculo de ruta más corta con Google Maps
+  var distanciaKm = 50.0; // Distancia de seguridad predeterminada si no se puede geocodificar
+  var errorMaps = null;
+
+  if (destino && destino.trim().length > 3) {
+    try {
+      var directions = Maps.newDirectionFinder()
+        .setOrigin(ORIGEN_ENVIO)
+        .setDestination(destino)
+        .setAlternatives(true)
+        .getDirections();
+
+      if (directions && directions.routes && directions.routes.length > 0) {
+        var menorDistanciaMetros = Infinity;
+        for (var i = 0; i < directions.routes.length; i++) {
+          var route = directions.routes[i];
+          var distanciaRuta = 0;
+          for (var j = 0; j < route.legs.length; j++) {
+            distanciaRuta += route.legs[j].distance.value;
+          }
+          if (distanciaRuta < menorDistanciaMetros) {
+            menorDistanciaMetros = distanciaRuta;
+          }
+        }
+        if (menorDistanciaMetros !== Infinity) {
+          distanciaKm = menorDistanciaMetros / 1000.0;
+        }
+      }
+    } catch (mErr) {
+      errorMaps = mErr.toString();
+      Logger.log("Aviso en Maps: " + errorMaps);
+    }
+  }
+
+  // Regla de tres volumétrica: 1 m³ = 250 kg (estándar logístico terrestre Speed Press)
+  var pesoVolumetrico = volM3 * 250.0;
+  var pesoTasable = Math.max(pesoKg, pesoVolumetrico);
+
+  // Búsqueda en matriz de 50 tramos Speed Press
+  var tramoEncontrado = buscarTramoTarifa(distanciaKm, pesoTasable);
+
+  // Cálculo del precio con tarifa unitaria y mínimo de tramo
+  var costeCalculado = 0.0;
+  if (tramoEncontrado) {
+    if (tramoEncontrado.unit >= 1.0) {
+      // Tarifa en € por tonelada (1000 kg)
+      costeCalculado = (tramoEncontrado.unit / 1000.0) * pesoTasable;
+    } else {
+      // Tarifa directa en € por kg
+      costeCalculado = tramoEncontrado.unit * pesoTasable;
+    }
+    // Aplicar mínimo del tramo
+    costeCalculado = Math.max(tramoEncontrado.minPrice, costeCalculado);
+  } else {
+    // Tarifa base de contingencia
+    costeCalculado = Math.max(18.30, pesoTasable * 0.25);
+  }
+
+  return {
+    gratis: false,
+    costeTransporte: Number(costeCalculado.toFixed(2)),
+    mensaje: "Gastos de transporte no incluidos en la compra web (pedido inferior a 500,00 € con IVA).",
+    distanciaKm: Number(distanciaKm.toFixed(1)),
+    pesoKg: Number(pesoKg.toFixed(2)),
+    volM3: Number(volM3.toFixed(3)),
+    bultos: bultos,
+    pesoTasable: Number(pesoTasable.toFixed(2)),
+    tramo: tramoEncontrado,
+    errorMaps: errorMaps
+  };
+}
+
+/**
+ * Busca el tramo correspondiente en la tabla Speed Press según Km y Kg.
+ */
+function buscarTramoTarifa(km, kg) {
+  var tramoPorKm = null;
+  for (var i = 0; i < TARIFAS_SPEED_PRESS.length; i++) {
+    var t = TARIFAS_SPEED_PRESS[i];
+    // Coincidencia en tramo de Km
+    if (km >= t.dKm && (km <= t.hKm || t.hKm >= 25000)) {
+      // Coincidencia en tramo de Kg
+      if (kg >= t.dKg && (kg <= t.hKg || t.hKg >= 24000)) {
+        return t;
+      }
+      if (!tramoPorKm) tramoPorKm = t;
+    }
+  }
+  return tramoPorKm || TARIFAS_SPEED_PRESS[0];
+}
+
+/**
+ * Busca o crea una carpeta en Google Drive por nombre.
  */
 function obtenerOCrearCarpeta(nombreCarpeta) {
   var carpetas = DriveApp.getFoldersByName(nombreCarpeta);
@@ -125,9 +315,36 @@ function obtenerOCrearCarpeta(nombreCarpeta) {
 }
 
 /**
- * Genera el diseño HTML del correo corporativo para el cliente.
+ * Genera el cuerpo HTML enriquecido para el correo corporativo.
  */
 function generarPlantillaHtmlEmail(info) {
+  var t = info.transporte || { gratis: true };
+
+  var bloqueTransporte = t.gratis
+    ? `
+      <div style="background: rgba(46, 125, 50, 0.08); border-left: 4px solid #2e7d32; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <h4 style="margin: 0 0 6px 0; color: #1b5e20; font-size: 15px;">🚚 ¡Transporte Gratuito Incluido!</h4>
+        <p style="margin: 0; font-size: 13px; color: #2e7d32; line-height: 1.5;">
+          Al superar los <strong>500,00 € (IVA incluido)</strong> en su compra, los gastos de transporte corren por nuestra cuenta desde nuestras instalaciones en <strong>Arcos de la Frontera (Cádiz)</strong>.
+        </p>
+      </div>
+    `
+    : `
+      <div style="background: #fff8e1; border-left: 4px solid #fbbc05; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <h4 style="margin: 0 0 8px 0; color: #7a5a00; font-size: 15px;">🚚 Información de Transporte (Speed Press)</h4>
+        <p style="margin: 0 0 8px 0; font-size: 13px; color: #5d4037; line-height: 1.5;">
+          Al ser un pedido inferior a 500,00 € con IVA, los gastos de transporte no están incluidos en el albarán ni cobrados en la web.
+        </p>
+        <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-top: 8px;">
+          <tr><td style="padding: 3px 0; color: #666;">Origen permanente:</td><td style="text-align: right; font-weight: 600;">Arcos de la Frontera (Cádiz)</td></tr>
+          <tr><td style="padding: 3px 0; color: #666;">Distancia menor (Google Maps):</td><td style="text-align: right; font-weight: 600;">${t.distanciaKm} km</td></tr>
+          <tr><td style="padding: 3px 0; color: #666;">Bultos / Peso / Volumen:</td><td style="text-align: right; font-weight: 600;">${t.bultos} bultos · ${t.pesoKg} kg · ${t.volM3} m³</td></tr>
+          <tr><td style="padding: 3px 0; color: #666;">Peso tasable (regla de 3):</td><td style="text-align: right; font-weight: 600;">${t.pesoTasable} kg</td></tr>
+          <tr style="border-top: 1px dashed #e0e0e0;"><td style="padding: 6px 0 0; font-weight: bold; color: #093375;">Coste transporte calculado:</td><td style="padding: 6px 0 0; text-align: right; font-weight: bold; font-size: 15px; color: #093375;">${t.costeTransporte.toFixed(2)} €</td></tr>
+        </table>
+      </div>
+    `;
+
   return `
   <!DOCTYPE html>
   <html lang="es">
@@ -148,7 +365,7 @@ function generarPlantillaHtmlEmail(info) {
       .attachment-icon { font-size: 28px; margin-right: 15px; }
       .attachment-text strong { color: #093375; font-size: 14px; }
       .attachment-text span { font-size: 12px; color: #555; display: block; margin-top: 2px; }
-      .footer { background: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }
+      .footer { background: #f8fafc; padding: 20px 25px; text-align: center; font-size: 12px; color: #718096; border-top: 1px solid #e2e8f0; }
     </style>
   </head>
   <body>
@@ -159,30 +376,31 @@ function generarPlantillaHtmlEmail(info) {
       </div>
       <div class="content">
         <div class="greeting">¡Hola, ${info.clientName}!</div>
-        <p>Queremos agradecerte tu compra en nuestra tienda web. Tu pedido ha sido tramitado con éxito y ya estamos preparando toda tu documentación.</p>
+        <p>Le agradecemos su confianza en <strong>Food4You</strong>. Su pedido ha sido registrado con éxito en nuestro sistema central.</p>
         
         <div class="info-card">
-          <div class="info-row"><span>Número de Pedido:</span><strong>${info.pedidoNum}</strong></div>
-          ${info.facturaNum ? `<div class="info-row"><span>Número de Factura:</span><strong>${info.facturaNum}</strong></div>` : ''}
-          <div class="info-row"><span>Fecha:</span><span>${info.fecha}</span></div>
-          <div class="info-row"><span>Total Pagado:</span><span>${info.totalAmount} €</span></div>
+          <div class="info-row"><span>Número de Pedido:</span> <strong>${info.pedidoNum}</strong></div>
+          ${info.facturaNum ? `<div class="info-row"><span>Factura Emitida:</span> <strong>${info.facturaNum}</strong></div>` : ''}
+          <div class="info-row"><span>Fecha:</span> <span>${info.fecha}</span></div>
+          <div class="info-row"><span>Importe Total:</span> <span>${info.totalAmount} €</span></div>
         </div>
+
+        ${bloqueTransporte}
 
         <div class="attachment-box">
           <div class="attachment-icon">📎</div>
           <div class="attachment-text">
             <strong>${info.fileName}</strong>
-            <span>Incluye la Hoja de Pedido, Albarán de Entrega y Factura en formato Excel.</span>
+            <span>Documentación completa adjunta (Hoja de Pedido, Albarán y Factura)</span>
           </div>
         </div>
 
-        <p style="font-size: 13px; color: #555; line-height: 1.5;">
-          Encontrarás el documento Excel adjunto a este correo electrónico. También se ha archivado de forma segura una copia digital en nuestro sistema en la carpeta <strong>Ventas por Web</strong>.
+        <p style="font-size: 14px; color: #555; line-height: 1.6;">
+          También hemos guardado una copia íntegra de sus documentos en nuestro Google Drive oficial en la carpeta <strong>"${CARPETA_DRIVE_VENTAS}"</strong>.
         </p>
       </div>
       <div class="footer">
-        Food4You · Soluciones de cocina y alimentación para empresas.<br>
-        Este es un mensaje automático generado tras la compra en nuestra tienda online.
+        <p>Food4You, SLS · C. Granadillos, 11630 Arcos de la Frontera, Cádiz<br>Este es un correo automático de confirmación generado tras su compra.</p>
       </div>
     </div>
   </body>
@@ -191,36 +409,14 @@ function generarPlantillaHtmlEmail(info) {
 }
 
 /**
- * Función para probar el script directamente desde el editor de Apps Script.
- * Selecciona "testEnvio" en la barra superior y haz clic en "Ejecutar".
+ * Función de prueba para ejecutar directamente en el editor de Google Apps Script.
  */
-function testEnvio() {
-  var miCorreo = Session.getActiveUser().getEmail();
-  Logger.log("Ejecutando prueba de envío hacia: " + miCorreo);
+function testCalcularTransporte() {
+  Logger.log("=== TEST 1: Pedido >= 500 € (Transporte Gratis) ===");
+  var resGratis = calcularTransporteGoogleMaps("Av. Diagonal 400, Barcelona", 550.00, 75.0, 0.9, 2);
+  Logger.log(JSON.stringify(resGratis, null, 2));
 
-  // Crear un archivo de prueba simulado
-  var contenidoSimulado = "Simulación de Excel Food4You";
-  var testBlob = Utilities.newBlob(contenidoSimulado, "text/plain", "Food4You_Documentacion_TEST.xlsx");
-
-  // 1. Probar guardado en carpeta
-  var folder = obtenerOCrearCarpeta(CARPETA_DRIVE_VENTAS);
-  var archivo = folder.createFile(testBlob);
-  Logger.log("Carpeta Drive verificada: " + folder.getName());
-  Logger.log("Archivo creado en Drive con ID: " + archivo.getId());
-
-  // 2. Probar envío de email
-  GmailApp.sendEmail(miCorreo, "Prueba de conexión Food4You -> Apps Script", "Esta es una prueba de conexión exitosa.", {
-    name: "Food4You Test",
-    htmlBody: generarPlantillaHtmlEmail({
-      clientName: "Usuario de Prueba",
-      pedidoNum: "P-2026-TEST",
-      facturaNum: "F-2026-TEST",
-      fecha: new Date().toLocaleDateString('es-ES'),
-      totalAmount: "125.00",
-      fileName: "Food4You_Documentacion_TEST.xlsx"
-    }),
-    attachments: [testBlob]
-  });
-
-  Logger.log("¡Prueba completada! Revisa tu bandeja de entrada en " + miCorreo + " y tu carpeta de Drive '" + CARPETA_DRIVE_VENTAS + "'.");
+  Logger.log("\n=== TEST 2: Pedido < 500 € (Cálculo Maps + Speed Press) ===");
+  var resTarifa = calcularTransporteGoogleMaps("Calle Sierpes 10, Sevilla", 180.00, 15.0, 0.08, 2);
+  Logger.log(JSON.stringify(resTarifa, null, 2));
 }

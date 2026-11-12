@@ -296,6 +296,7 @@
                 <img data-logo alt="Food4You">
             </div>
             <div class="nav-links">
+                <a href="web/subpagina/index.html">Sobre Nosotros</a>
                 <a onclick="navigate('landing-view')">Inicio</a>
                 <a onclick="irATienda('All')">Tienda</a>
             </div>
@@ -317,7 +318,7 @@
 
             <section class="hero">
                 <div class="hero-copy">
-                    <span class="eyebrow">Soluciones de cocina y alimentación para empresas</span>
+                    <span class="eyebrow" style="background: rgba(46, 125, 50, 0.15); color: #1b5e20; border: 1px solid rgba(46, 125, 50, 0.3);">🚚 Envío gratuito en compras a partir de 500 € (IVA incl.)</span>
                     <h1><span class="w1">Breathe</span><span class="w2">Taste</span><span class="w3">Innovate</span></h1>
                     <p class="hero-sub">Cocinas que respiran, sabores que enamoran y tecnología que trabaja por ti.
                         Food4You lleva a tu empresa menús, electrodomésticos inteligentes y servicios pensados para comer mejor con menos esfuerzo.</p>
@@ -456,6 +457,7 @@
                     <p>Total IVA: <span id="iva-total">0.00</span>€</p>
                     <p id="iva-note" class="iva-note" hidden>Sin IVA: cliente establecido fuera de la UE (exportación).</p>
                     <h4>TOTAL A PAGAR: <span id="grand-total">0.00</span>€</h4>
+                    <div id="transport-disclaimer" style="margin-top: 1.2rem; text-align: left; font-size: 0.88rem; line-height: 1.45; padding: 0.85rem 1.1rem; border-radius: 10px; display: none;"></div>
                 </div>
             </div>
 
@@ -512,60 +514,61 @@
 
         // Catálogo de Productos con IVA asignado (21% electrodomésticos, 10% comida) y enlaces Drive recuperados
         const products = [
-            { id: 1, name: "Nevera Inteligente", price: 1500, iva: 0.21, cat: "Electrodomésticos", drive_id: "12fUkQPqDGhWBuPIXYP5EDEbQPz4Bl0zX" },
-            { id: 2, name: "Tupper programable a medida", price: 30, iva: 0.21, cat: "Electrodomésticos", drive_id: "19eVdpKO-p69mwcLaF5iXfxf0CKcOK4mY" },
-            { id: 3, name: "Botella programable a medida", price: 40, iva: 0.21, cat: "Electrodomésticos", drive_id: "1adRtrIgHMTdGpd2kV5sV_Dz3ecqBQES5" },
-            { id: 4, name: "Envío en dron (servicio)", price: 30, iva: 0.21, cat: "Servicios", drive_id: "1lPTu7mz-89KdHYwpP9qhB7exPLFBJJoa" },
-            { id: 5, name: "Dispensador de proteína y creatina", price: 180, iva: 0.21, cat: "Electrodomésticos", drive_id: "1D3WDfSZLuE1DYOxtV7q_fFe4_3NSKa_u" },
-            { id: 6, name: "Dispensador de café, leche y agua", price: 250, iva: 0.21, cat: "Electrodomésticos", drive_id: "1G0kN9iwUNOhJJnzSklrLvRVsN8xfL8AH" },
-            { id: 7, name: "Dispensador de refrescos", price: 150, iva: 0.21, cat: "Electrodomésticos", drive_id: "1H_5XJgRhppBJZiWYZQeTtn8W0mXoj6m9" },
-            { id: 8, name: "Compartimentos para nevera", price: 40, iva: 0.21, cat: "Accesorios", drive_id: "1eqNfW9jgx9s2iBnnef10LMBfrpl26ctw" },
-            { id: 9, name: "Tablet de nevera", price: 200, iva: 0.21, cat: "Electrodomésticos", drive_id: "1K7LaetcVqXvLOonXk4ZNS499GjTeV6u5" },
-            { id: 10, name: "App del móvil (servicios)", price: 15, iva: 0.21, cat: "Servicios", drive_id: "1oQ8wPzkeRQiQq6oaQv34N0wHVEjXbvQV" },
-            { id: 11, name: "Máquina expendedora", price: 1000, iva: 0.21, cat: "Electrodomésticos", drive_id: "1vmNGGsPNXpJ-3l4_EC-wwQTBQxxNH-Z4" },
-            { id: 12, name: "Servicio relleno de máquina", price: 70, iva: 0.21, cat: "Servicios", drive_id: "1Umv0vRLKhMFz5xFcrbo4wLb9Yg-y9YKM" },
-            { id: 13, name: "Máquina Healthy Version", price: 1000, iva: 0.21, cat: "Electrodomésticos", drive_id: "1zxzAIMKnsFI9V0l_8VENeTyR66CTbn5H" },
-            { id: 14, name: "Cuberteria sostenible", price: 20, iva: 0.21, cat: "Accesorios", drive_id: "1MuSYewpRCCFbOkwwPB8wV_GEwgMq_FPw" },
-            { id: 15, name: "Juego de salsas ZERO", price: 10, iva: 0.10, cat: "Accesorios", drive_id: "15ML8XBeMOQchO0xsI-YICUpFQiOZz4U1" },
-            { id: 16, name: "Envases reutilizables", price: 20, iva: 0.21, cat: "Accesorios", drive_id: "1oMczos8DrJxbj4wVOBGBMzGnYUzT90zX" },
-            { id: 17, name: "Servilleteros", price: 8, iva: 0.21, cat: "Accesorios", drive_id: "1bfW7-7M-b6iKpxUVZTcaqbU3KRUIBdkI" },
-            { id: 18, name: "Air fryer Inteligente con IA", price: 150, iva: 0.21, cat: "Electrodomésticos", drive_id: "1lO0GXi-q56jvinjMqjN9UJrfLXtkIjFM" },
-            { id: 19, name: "Horno Inteligente", price: 500, iva: 0.21, cat: "Electrodomésticos", drive_id: "1gyfuYZ8-I0YwKEsR4zMlVrGNmdKQrY_j" },
-            { id: 20, name: "Thermomix Transparente", price: 1000, iva: 0.21, cat: "Electrodomésticos", drive_id: "195dfrTP7g9GVrLP31aphFykHMDpL7yW6" },
+            { id: 1, name: "Nevera Inteligente", price: 1500, iva: 0.21, cat: "Electrodomésticos", drive_id: "12fUkQPqDGhWBuPIXYP5EDEbQPz4Bl0zX", weight: 70.0, vol: 0.84, bultos: 1 },
+            { id: 2, name: "Tupper programable a medida", price: 30, iva: 0.21, cat: "Electrodomésticos", drive_id: "19eVdpKO-p69mwcLaF5iXfxf0CKcOK4mY", weight: 0.35, vol: 0.01, bultos: 1 },
+            { id: 3, name: "Botella programable a medida", price: 40, iva: 0.21, cat: "Electrodomésticos", drive_id: "1adRtrIgHMTdGpd2kV5sV_Dz3ecqBQES5", weight: 0.4, vol: 0.01, bultos: 1 },
+            { id: 4, name: "Envío en dron (servicio)", price: 30, iva: 0.21, cat: "Servicios", drive_id: "1lPTu7mz-89KdHYwpP9qhB7exPLFBJJoa", weight: 0.0, vol: 0.0, bultos: 0 },
+            { id: 5, name: "Dispensador de proteína y creatina", price: 180, iva: 0.21, cat: "Electrodomésticos", drive_id: "1D3WDfSZLuE1DYOxtV7q_fFe4_3NSKa_u", weight: 4.5, vol: 0.03, bultos: 1 },
+            { id: 6, name: "Dispensador de café, leche y agua", price: 250, iva: 0.21, cat: "Electrodomésticos", drive_id: "1G0kN9iwUNOhJJnzSklrLvRVsN8xfL8AH", weight: 12.0, vol: 0.08, bultos: 1 },
+            { id: 7, name: "Dispensador de refrescos", price: 150, iva: 0.21, cat: "Electrodomésticos", drive_id: "1H_5XJgRhppBJZiWYZQeTtn8W0mXoj6m9", weight: 9.0, vol: 0.06, bultos: 1 },
+            { id: 8, name: "Compartimentos para nevera", price: 40, iva: 0.21, cat: "Accesorios", drive_id: "1eqNfW9jgx9s2iBnnef10LMBfrpl26ctw", weight: 0.8, vol: 0.01, bultos: 1 },
+            { id: 9, name: "Tablet de nevera", price: 200, iva: 0.21, cat: "Electrodomésticos", drive_id: "1K7LaetcVqXvLOonXk4ZNS499GjTeV6u5", weight: 0.6, vol: 0.01, bultos: 1 },
+            { id: 10, name: "App del móvil (servicios)", price: 15, iva: 0.21, cat: "Servicios", drive_id: "1oQ8wPzkeRQiQq6oaQv34N0wHVEjXbvQV", weight: 0.0, vol: 0.0, bultos: 0 },
+            { id: 11, name: "Máquina expendedora", price: 1000, iva: 0.21, cat: "Electrodomésticos", drive_id: "1vmNGGsPNXpJ-3l4_EC-wwQTBQxxNH-Z4", weight: 250.0, vol: 1.95, bultos: 1 },
+            { id: 12, name: "Servicio relleno de máquina", price: 70, iva: 0.21, cat: "Servicios", drive_id: "1Umv0vRLKhMFz5xFcrbo4wLb9Yg-y9YKM", weight: 0.0, vol: 0.0, bultos: 0 },
+            { id: 13, name: "Máquina Healthy Version", price: 1000, iva: 0.21, cat: "Electrodomésticos", drive_id: "1zxzAIMKnsFI9V0l_8VENeTyR66CTbn5H", weight: 260.0, vol: 1.95, bultos: 1 },
+            { id: 14, name: "Cuberteria sostenible", price: 20, iva: 0.21, cat: "Accesorios", drive_id: "1MuSYewpRCCFbOkwwPB8wV_GEwgMq_FPw", weight: 0.35, vol: 0.01, bultos: 1 },
+            { id: 15, name: "Juego de salsas ZERO", price: 10, iva: 0.10, cat: "Accesorios", drive_id: "15ML8XBeMOQchO0xsI-YICUpFQiOZz4U1", weight: 1.2, vol: 0.01, bultos: 1 },
+            { id: 16, name: "Envases reutilizables", price: 20, iva: 0.21, cat: "Accesorios", drive_id: "1oMczos8DrJxbj4wVOBGBMzGnYUzT90zX", weight: 1.0, vol: 0.01, bultos: 1 },
+            { id: 17, name: "Servilleteros", price: 8, iva: 0.21, cat: "Accesorios", drive_id: "1bfW7-7M-b6iKpxUVZTcaqbU3KRUIBdkI", weight: 0.3, vol: 0.01, bultos: 1 },
+            { id: 18, name: "Air fryer Inteligente con IA", price: 150, iva: 0.21, cat: "Electrodomésticos", drive_id: "1lO0GXi-q56jvinjMqjN9UJrfLXtkIjFM", weight: 6.0, vol: 0.06, bultos: 1 },
+            { id: 19, name: "Horno Inteligente", price: 500, iva: 0.21, cat: "Electrodomésticos", drive_id: "1gyfuYZ8-I0YwKEsR4zMlVrGNmdKQrY_j", weight: 22.0, vol: 0.18, bultos: 1 },
+            { id: 20, name: "Thermomix Transparente", price: 1000, iva: 0.21, cat: "Electrodomésticos", drive_id: "195dfrTP7g9GVrLP31aphFykHMDpL7yW6", weight: 8.0, vol: 0.05, bultos: 1 },
             
             // Menús - IVA 10%
-            { id: 21, name: "Desayuno 1- Mediterráneo", price: 5.5, iva: 0.10, cat: "Menús", drive_id: "1aWHG2cnjsqen-_dtgP_5ghQDva8Dmkm1" },
-            { id: 22, name: "Desayuno 2- Energía", price: 6, iva: 0.10, cat: "Menús", drive_id: "1rL0im2ffpRr1Txn8Fv8u1SpqlbDhuoLd" },
-            { id: 23, name: "Desayuno 3- Completo", price: 7, iva: 0.10, cat: "Menús", drive_id: "1rSpAP4HjO6GeoCVIofmrtClKN4Q4vD0r" },
-            { id: 24, name: "Desayuno 4- Fruta y cereales", price: 5, iva: 0.10, cat: "Menús", drive_id: "1Zne2EICSQuiFJEG1qgus-JDa_dTVw4t5" },
-            { id: 25, name: "Desayuno 5- Andaluz", price: 4.5, iva: 0.10, cat: "Menús", drive_id: "1eJE8VuZNVfPCZ7eydoaqpRoQoh2jY4IL" },
-            { id: 26, name: "Desayuno Med. Sin Gluten", price: 6.8, iva: 0.10, cat: "Menús", drive_id: "16iNYgiVIdPRGbKWpFFqtGzrvXZUiKZxG" },
-            { id: 27, name: "Desayuno Energ. Sin Gluten", price: 7.3, iva: 0.10, cat: "Menús", drive_id: "1BWZiPPIpGQgleh0E076rwYWwWYgqv9ul" },
-            { id: 28, name: "Desayuno Comp. Sin Gluten", price: 8.5, iva: 0.10, cat: "Menús", drive_id: "1H5qKjSFQbyR1MWWsp5lhEwLftYmNX_bh" },
-            { id: 29, name: "Desayuno Frut. Sin Gluten", price: 6.2, iva: 0.10, cat: "Menús", drive_id: "1ZuuRu26Rpb4az5MUvBBZP12qDL2VHH8D" },
-            { id: 30, name: "Desayuno Hummus Sin Gluten", price: 6.5, iva: 0.10, cat: "Menús", drive_id: "1y1_7RUvDFXVydJcqJA7VsRFkXBwLSws2" },
-            { id: 31, name: "Almuerzo 1 – Pollo", price: 9.5, iva: 0.10, cat: "Menús", drive_id: "1EgO8r1H5Eh5xPNxGME9AM3Kog1OToCVk" },
-            { id: 32, name: "Almuerzo 2 – Salmón", price: 12, iva: 0.10, cat: "Menús", drive_id: "1HepFi2HxzXli6IYQseqKssgQPbDfgtgw" },
-            { id: 33, name: "Almuerzo 3 – Lentejas", price: 8, iva: 0.10, cat: "Menús", drive_id: "1qvFCkwUcnrv3Yc-Ic4vt3f-3mu68u-_q" },
-            { id: 34, name: "Almuerzo 4 – Pasta", price: 8.5, iva: 0.10, cat: "Menús", drive_id: "1KNQI9P06vpUDfobKQMccHZqoTOZb6qSY" },
-            { id: 35, name: "Almuerzo 5 – Vegetariano", price: 8.5, iva: 0.10, cat: "Menús", drive_id: "1nzAwPGbPQnZk7liRs7W7MOF3z9VaxByM" },
-            { id: 36, name: "Almuerzo Pollo Sin Gluten", price: 11.0, iva: 0.10, cat: "Menús", drive_id: "1lawqaKbcsi0oM3RmQyip2oUoHmO_6M7_" },
-            { id: 37, name: "Almuerzo Salmón Sin Gluten", price: 13.5, iva: 0.10, cat: "Menús", drive_id: "1rTJ5-1L94SLOv7Exr2xrHFvGP4S1nwtx" },
-            { id: 38, name: "Almuerzo Lentejas Sin Gluten", price: 9.5, iva: 0.10, cat: "Menús", drive_id: "1-KdIu5GkWUGPbwrsszaihY-cYAdCC0Ow" },
-            { id: 39, name: "Almuerzo Quinoa Sin Gluten", price: 10.5, iva: 0.10, cat: "Menús", drive_id: "1qHqEpN4jwDbV-vSrIXJC__FiWPrjvjXR" },
-            { id: 40, name: "Almuerzo Merluza Sin Gluten", price: 12.5, iva: 0.10, cat: "Menús", drive_id: "1gBdsbZI4ybJ3fVcER_brmNljtR4KnxSm" },
+            { id: 21, name: "Desayuno 1- Mediterráneo", price: 5.5, iva: 0.10, cat: "Menús", drive_id: "1aWHG2cnjsqen-_dtgP_5ghQDva8Dmkm1", weight: 0.35, vol: 0.01, bultos: 1 },
+            { id: 22, name: "Desayuno 2- Energía", price: 6, iva: 0.10, cat: "Menús", drive_id: "1rL0im2ffpRr1Txn8Fv8u1SpqlbDhuoLd", weight: 0.35, vol: 0.01, bultos: 1 },
+            { id: 23, name: "Desayuno 3- Completo", price: 7, iva: 0.10, cat: "Menús", drive_id: "1rSpAP4HjO6GeoCVIofmrtClKN4Q4vD0r", weight: 0.45, vol: 0.01, bultos: 1 },
+            { id: 24, name: "Desayuno 4- Fruta y cereales", price: 5, iva: 0.10, cat: "Menús", drive_id: "1Zne2EICSQuiFJEG1qgus-JDa_dTVw4t5", weight: 0.3, vol: 0.01, bultos: 1 },
+            { id: 25, name: "Desayuno 5- Andaluz", price: 4.5, iva: 0.10, cat: "Menús", drive_id: "1eJE8VuZNVfPCZ7eydoaqpRoQoh2jY4IL", weight: 0.3, vol: 0.01, bultos: 1 },
+            { id: 26, name: "Desayuno Med. Sin Gluten", price: 6.8, iva: 0.10, cat: "Menús", drive_id: "16iNYgiVIdPRGbKWpFFqtGzrvXZUiKZxG", weight: 0.35, vol: 0.01, bultos: 1 },
+            { id: 27, name: "Desayuno Energ. Sin Gluten", price: 7.3, iva: 0.10, cat: "Menús", drive_id: "1BWZiPPIpGQgleh0E076rwYWwWYgqv9ul", weight: 0.35, vol: 0.01, bultos: 1 },
+            { id: 28, name: "Desayuno Comp. Sin Gluten", price: 8.5, iva: 0.10, cat: "Menús", drive_id: "1H5qKjSFQbyR1MWWsp5lhEwLftYmNX_bh", weight: 0.45, vol: 0.01, bultos: 1 },
+            { id: 29, name: "Desayuno Frut. Sin Gluten", price: 6.2, iva: 0.10, cat: "Menús", drive_id: "1ZuuRu26Rpb4az5MUvBBZP12qDL2VHH8D", weight: 0.3, vol: 0.01, bultos: 1 },
+            { id: 30, name: "Desayuno Hummus Sin Gluten", price: 6.5, iva: 0.10, cat: "Menús", drive_id: "1y1_7RUvDFXVydJcqJA7VsRFkXBwLSws2", weight: 0.3, vol: 0.01, bultos: 1 },
+            { id: 31, name: "Almuerzo 1 – Pollo", price: 9.5, iva: 0.10, cat: "Menús", drive_id: "1EgO8r1H5Eh5xPNxGME9AM3Kog1OToCVk", weight: 0.45, vol: 0.01, bultos: 1 },
+            { id: 32, name: "Almuerzo 2 – Salmón", price: 12, iva: 0.10, cat: "Menús", drive_id: "1HepFi2HxzXli6IYQseqKssgQPbDfgtgw", weight: 0.4, vol: 0.01, bultos: 1 },
+            { id: 33, name: "Almuerzo 3 – Lentejas", price: 8, iva: 0.10, cat: "Menús", drive_id: "1qvFCkwUcnrv3Yc-Ic4vt3f-3mu68u-_q", weight: 0.45, vol: 0.01, bultos: 1 },
+            { id: 34, name: "Almuerzo 4 – Pasta", price: 8.5, iva: 0.10, cat: "Menús", drive_id: "1KNQI9P06vpUDfobKQMccHZqoTOZb6qSY", weight: 0.45, vol: 0.01, bultos: 1 },
+            { id: 35, name: "Almuerzo 5 – Vegetariano", price: 8.5, iva: 0.10, cat: "Menús", drive_id: "1nzAwPGbPQnZk7liRs7W7MOF3z9VaxByM", weight: 0.45, vol: 0.01, bultos: 1 },
+            { id: 36, name: "Almuerzo Pollo Sin Gluten", price: 11.0, iva: 0.10, cat: "Menús", drive_id: "1lawqaKbcsi0oM3RmQyip2oUoHmO_6M7_", weight: 0.45, vol: 0.01, bultos: 1 },
+            { id: 37, name: "Almuerzo Salmón Sin Gluten", price: 13.5, iva: 0.10, cat: "Menús", drive_id: "1rTJ5-1L94SLOv7Exr2xrHFvGP4S1nwtx", weight: 0.4, vol: 0.01, bultos: 1 },
+            { id: 38, name: "Almuerzo Lentejas Sin Gluten", price: 9.5, iva: 0.10, cat: "Menús", drive_id: "1-KdIu5GkWUGPbwrsszaihY-cYAdCC0Ow", weight: 0.45, vol: 0.01, bultos: 1 },
+            { id: 39, name: "Almuerzo Quinoa Sin Gluten", price: 10.5, iva: 0.10, cat: "Menús", drive_id: "1qHqEpN4jwDbV-vSrIXJC__FiWPrjvjXR", weight: 0.45, vol: 0.01, bultos: 1 },
+            { id: 40, name: "Almuerzo Merluza Sin Gluten", price: 12.5, iva: 0.10, cat: "Menús", drive_id: "1gBdsbZI4ybJ3fVcER_brmNljtR4KnxSm", weight: 0.4, vol: 0.01, bultos: 1 },
             
             // Accesorios / Electrodomésticos - IVA 21%
-            { id: 41, name: "Escurridor de vajilla", price: 16.5, iva: 0.21, cat: "Accesorios", drive_id: "1wg6WrE5ToOlgQeIKw5oz5eJ4dkJiPnnN" },
-            { id: 42, name: "Organizador de vajilla", price: 30.5, iva: 0.21, cat: "Accesorios", drive_id: "1DXSNY2ZjD5XLmCGLUxuGM46nYJKWr98l" },
-            { id: 43, name: "Microondas con sensor", price: 100, iva: 0.21, cat: "Electrodomésticos", drive_id: "1K-4k3BDnyWjt0zkuQdS3LhrgSxKCKKm1" },
-            { id: 44, name: "Exprimidor inteligente", price: 50, iva: 0.21, cat: "Electrodomésticos", drive_id: "1bt21w5R1dnX7WPOS3VAd_B-adZ1B9j4v" },
-            { id: 45, name: "Batidora con autolavado", price: 50, iva: 0.21, cat: "Electrodomésticos", drive_id: "1pji7qZcS-IeMtHTvIucEJM7bvoyQJZVo" },
-            { id: 46, name: "Tostador inteligente", price: 50, iva: 0.21, cat: "Electrodomésticos", drive_id: "1Wzz0yI3xxrmf3vFn4QNp0pjJ_IBkVaXW" },
-            { id: 47, name: "Papelera inteligente", price: 50, iva: 0.21, cat: "Electrodomésticos", drive_id: "1GL9EUsJ__L3oeeZ3lXrGZSI-LLZebqbe" },
-            { id: 48, name: "Envasadora inteligente", price: 55, iva: 0.21, cat: "Electrodomésticos", drive_id: "13K7fF0Cn3_8dyXXu1tvuIZ22abeGhwy8" },
-            { id: 49, name: "Pelador de frutas", price: 30, iva: 0.21, cat: "Electrodomésticos", drive_id: "1l0RQ-uDcqUddLJpHN4DRLsoCtunPHB8u" },
-            { id: 50, name: "Maquina de helados", price: 150, iva: 0.21, cat: "Electrodomésticos", drive_id: "1ke3VnFZw9C35mok8YLKe2UDWzNecLjLZ" }
+            { id: 41, name: "Escurridor de vajilla", price: 16.5, iva: 0.21, cat: "Accesorios", drive_id: "1wg6WrE5ToOlgQeIKw5oz5eJ4dkJiPnnN", weight: 1.5, vol: 0.01, bultos: 1 },
+            { id: 42, name: "Organizador de vajilla", price: 30.5, iva: 0.21, cat: "Accesorios", drive_id: "1DXSNY2ZjD5XLmCGLUxuGM46nYJKWr98l", weight: 1.8, vol: 0.01, bultos: 1 },
+            { id: 43, name: "Microondas con sensor", price: 100, iva: 0.21, cat: "Electrodomésticos", drive_id: "1K-4k3BDnyWjt0zkuQdS3LhrgSxKCKKm1", weight: 12.0, vol: 0.08, bultos: 1 },
+            { id: 44, name: "Exprimidor inteligente", price: 50, iva: 0.21, cat: "Electrodomésticos", drive_id: "1bt21w5R1dnX7WPOS3VAd_B-adZ1B9j4v", weight: 3.0, vol: 0.03, bultos: 1 },
+            { id: 45, name: "Batidora con autolavado", price: 50, iva: 0.21, cat: "Electrodomésticos", drive_id: "1pji7qZcS-IeMtHTvIucEJM7bvoyQJZVo", weight: 2.5, vol: 0.02, bultos: 1 },
+            { id: 46, name: "Tostador inteligente", price: 50, iva: 0.21, cat: "Electrodomésticos", drive_id: "1Wzz0yI3xxrmf3vFn4QNp0pjJ_IBkVaXW", weight: 2.0, vol: 0.01, bultos: 1 },
+            { id: 47, name: "Papelera inteligente", price: 50, iva: 0.21, cat: "Electrodomésticos", drive_id: "1GL9EUsJ__L3oeeZ3lXrGZSI-LLZebqbe", weight: 7.0, vol: 0.08, bultos: 1 },
+            { id: 48, name: "Envasadora inteligente", price: 55, iva: 0.21, cat: "Electrodomésticos", drive_id: "13K7fF0Cn3_8dyXXu1tvuIZ22abeGhwy8", weight: 3.0, vol: 0.01, bultos: 1 },
+            { id: 49, name: "Pelador de frutas", price: 30, iva: 0.21, cat: "Electrodomésticos", drive_id: "1l0RQ-uDcqUddLJpHN4DRLsoCtunPHB8u", weight: 0.8, vol: 0.01, bultos: 1 },
+            { id: 50, name: "Maquina de helados", price: 150, iva: 0.21, cat: "Electrodomésticos", drive_id: "1ke3VnFZw9C35mok8YLKe2UDWzNecLjLZ", weight: 12.0, vol: 0.08, bultos: 1 },
+        
         ];
 
         let cart = []; // Almacena objetos: { product: {...}, qty: 1 }
@@ -746,6 +749,25 @@
             document.getElementById('iva-total').innerText = t.iva.toFixed(2);
             document.getElementById('grand-total').innerText = t.total.toFixed(2);
             document.getElementById('iva-note').hidden = inEU;
+
+            const disc = document.getElementById('transport-disclaimer');
+            if (disc) {
+                if (t.total === 0 || cart.length === 0) {
+                    disc.style.display = 'none';
+                } else if (t.total >= 500) {
+                    disc.style.display = 'block';
+                    disc.style.background = 'rgba(46, 125, 50, 0.12)';
+                    disc.style.border = '1px solid rgba(46, 125, 50, 0.35)';
+                    disc.style.color = '#1b5e20';
+                    disc.innerHTML = '🎉 <strong>¡Transporte gratuito incluido!</strong> Pedido superior o igual a 500,00 € (IVA incluido). Total bultos: ' + t.totalBultos + ' · Peso aprox: ' + t.totalWeight.toFixed(2) + ' kg.';
+                } else {
+                    disc.style.display = 'block';
+                    disc.style.background = 'rgba(251, 188, 5, 0.18)';
+                    disc.style.border = '1px solid rgba(251, 188, 5, 0.55)';
+                    disc.style.color = '#7a5a00';
+                    disc.innerHTML = '⚠️ <strong>Gastos de transporte no incluidos:</strong> al no superar los 500,00 € con IVA, se calcularán posteriormente en base a la menor distancia en km desde nuestras instalaciones (C. Granadillos, Arcos de la Frontera, Cádiz), peso (' + t.totalWeight.toFixed(2) + ' kg) y volumen (' + t.totalVol.toFixed(3) + ' m³).';
+                }
+            }
         }
 
         // ---------- Navegación ----------
@@ -848,9 +870,23 @@
                         clientNif: currentOrder.client.nif,
                         clientTel: currentOrder.client.tel,
                         clientDireccion: `${currentOrder.client.direccion}, ${currentOrder.client.cp} ${currentOrder.client.ciudad} (${currentOrder.client.pais})`,
+                        clientCity: currentOrder.client.ciudad,
+                        clientCp: currentOrder.client.cp,
+                        clientCountry: currentOrder.client.pais,
                         pedidoNum: currentOrder.pedidoNum,
                         facturaNum: currentOrder.facturaNum,
                         totalAmount: totals.total.toFixed(2),
+                        totalWeight: totals.totalWeight,
+                        totalVol: totals.totalVol,
+                        totalBultos: totals.totalBultos,
+                        items: currentOrder.items.map(i => ({
+                            id: i.product.id,
+                            name: i.product.name,
+                            qty: i.qty,
+                            weight: i.product.weight,
+                            vol: i.product.vol,
+                            bultos: i.product.bultos
+                        })),
                         fecha: currentOrder.fecha,
                         fileName: `Food4You_Documentacion_${currentOrder.pedidoNum}.xlsx`,
                         excelBase64: excelBase64
@@ -915,13 +951,19 @@
             const lines = items.map(item => {
                 const base = round2(item.product.price * item.qty);
                 const rate = inEU ? item.product.iva : 0;
-                return { product: item.product, qty: item.qty, base, rate, total: round2(base * (1 + rate)) };
+                const weight = item.product.weight !== undefined ? round2(item.product.weight * item.qty) : 0;
+                const vol = item.product.vol !== undefined ? Number((item.product.vol * item.qty).toFixed(3)) : 0;
+                const bultos = item.product.bultos !== undefined ? (item.product.bultos * item.qty) : item.qty;
+                return { product: item.product, qty: item.qty, base, rate, total: round2(base * (1 + rate)), weight, vol, bultos };
             });
             const base = round2(lines.reduce((s, l) => s + l.base, 0));
             const grupos = TASAS_IVA.map(r => round2(lines.filter(l => l.rate === r).reduce((s, l) => s + l.base, 0)));
             const ivas = grupos.map((g, i) => round2(g * TASAS_IVA[i]));
             const iva = round2(ivas.reduce((s, v) => s + v, 0));
-            return { lines, base, grupos, ivas, iva, total: round2(base + iva) };
+            const totalWeight = round2(lines.reduce((s, l) => s + l.weight, 0));
+            const totalVol = Number(lines.reduce((s, l) => s + l.vol, 0).toFixed(3));
+            const totalBultos = lines.reduce((s, l) => s + l.bultos, 0);
+            return { lines, base, grupos, ivas, iva, total: round2(base + iva), totalWeight, totalVol, totalBultos };
         }
 
         const serialExcel = d => Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000) + 25569;
@@ -1012,23 +1054,57 @@
             fx(A, 'F12', 'Pedido!F12', 'NIF: ' + c.nif);
             fx(A, 'F13', 'Pedido!F13', c.direccion);
             fx(A, 'F14', 'Pedido!F14&" · "&Pedido!F15', direccionPais);
+
+            // Cabeceras modificadas: Peso y Volumen separados en H19 e I19
+            try { A.unmergeCells('H19:I19'); } catch (e) {}
+            set(A, 'G19', 'Bultos');
+            set(A, 'H19', 'Peso (kg)');
+            set(A, 'I19', 'Volumen (m³)');
+            A.getCell('H19').alignment = { horizontal: 'center', vertical: 'middle' };
+            A.getCell('I19').alignment = { horizontal: 'center', vertical: 'middle' };
+            A.getCell('H19').font = { bold: true, size: 9 };
+            A.getCell('I19').font = { bold: true, size: 9 };
+
             for (let i = 0; i < MAX_LINEAS; i++) {
                 const r = FILA_INI + i;
                 const l = t.lines[i];
+                try { A.unmergeCells(`H${r}:I${r}`); } catch (e) {}
                 fx(A, `B${r}`, `IF(C${r}="","",ROW()-19)`, l ? i + 1 : '');
                 fx(A, `C${r}`, `IF(Pedido!C${r}="","",Pedido!C${r})`, l ? l.product.name.trim() : '');
                 fx(A, `D${r}`, `IF(Pedido!D${r}="","",Pedido!D${r})`, l ? l.qty : '');
                 set(A, `E${r}`, l ? l.qty : null);   // Entregado
                 fx(A, `F${r}`, `IF(D${r}="","",D${r}-N(E${r}))`, l ? 0 : '');
-                set(A, `G${r}`, l ? 1 : null);       // Bultos
-                set(A, `H${r}`, null);               // Observaciones
+                set(A, `G${r}`, l ? l.bultos : null); // Bultos
+                set(A, `H${r}`, l ? l.weight : null); // Peso (kg)
+                set(A, `I${r}`, l ? l.vol : null);    // Volumen (m³)
+                if (l) {
+                    A.getCell(`H${r}`).numFmt = '#,##0.00';
+                    A.getCell(`I${r}`).numFmt = '#,##0.000';
+                }
             }
             const totQty = o.items.reduce((s, i) => s + i.qty, 0);
             fx(A, 'D32', 'SUM(D20:D31)', totQty);
             fx(A, 'E32', 'SUM(E20:E31)', totQty);
             fx(A, 'F32', 'SUM(F20:F31)', 0);
-            fx(A, 'G32', 'SUM(G20:G31)', t.lines.length);
-            set(A, 'B48', 'Cómo usarla: concepto y cantidad pedida se traen de la hoja Pedido. Documento generado automáticamente desde la web de Food4You.');
+            fx(A, 'G32', 'SUM(G20:G31)', t.totalBultos);
+            fx(A, 'H32', 'SUM(H20:H31)', t.totalWeight);
+            fx(A, 'I32', 'SUM(I20:I31)', t.totalVol);
+            A.getCell('H32').numFmt = '#,##0.00';
+            A.getCell('I32').numFmt = '#,##0.000';
+
+            // Observaciones de entrega
+            const obsA = t.total >= 500
+                ? "Mercancía entregada en perfecto estado. Transporte gratuito incluido por superar 500,00 € con IVA."
+                : "Mercancía entregada en perfecto estado. Gastos de transporte no incluidos (pedido inferior a 500,00 € con IVA).";
+            set(A, 'B35', obsA);
+
+            // Disclaimer dinámico en B44 vinculado al total del Pedido (Pedido!$I$38)
+            fx(A, 'B44',
+                'IF(Pedido!$I$38>=500,"Albarán sin valorar · Transporte gratuito incluido.","Albarán sin valorar: Gastos de transporte no incluidos (pedido inferior a 500,00 € con IVA).")',
+                t.total >= 500 ? "Albarán sin valorar · Transporte gratuito incluido." : "Albarán sin valorar: Gastos de transporte no incluidos (pedido inferior a 500,00 € con IVA)."
+            );
+
+            set(A, 'B48', 'Cómo usarla: concepto y cantidad pedida se traen de la hoja Pedido; bultos, peso y volumen de almacén. Documento generado automáticamente desde la web de Food4You.');
 
             // ================= FACTURA =================
             set(F, 'I4', o.facturaNum);
