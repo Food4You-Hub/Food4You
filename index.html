@@ -8,8 +8,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"
             onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';document.head.appendChild(s);"></script>
         <!-- Three.js para el Globo Terráqueo 3D Interactivo -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
-            onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js';document.head.appendChild(s);"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onload="if(typeof asegurarInicioGlobo==='function')asegurarInicioGlobo();"
+            onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js';s.onload=function(){if(typeof asegurarInicioGlobo==='function')asegurarInicioGlobo();};document.head.appendChild(s);"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600&display=swap');
 
@@ -285,7 +285,7 @@
             .float-chip.fc2 { right: 0; }
         }
     
-        /* ================= GLOBO TERRÁQUEO 3D & BLOQUE INFERIOR ================= */
+        /* ================= GLOBO TERRÁQUEO 3D FLOTANTE (SIN CUADRO VISIBLE) ================= */
         #globe-hero-panel {
             position: relative;
             display: flex;
@@ -293,37 +293,35 @@
             width: 100%;
             max-width: 580px;
             margin: 0 auto;
-            background: #061733;
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            border-radius: 28px;
-            box-shadow: 0 25px 60px rgba(6, 23, 51, 0.4), 0 0 35px rgba(56, 189, 248, 0.08);
-            overflow: hidden;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            overflow: visible;
             box-sizing: border-box;
-            backdrop-filter: blur(16px);
         }
 
         .globe-header {
-            padding: 1.6rem 1.4rem 0.6rem 1.4rem;
+            padding: 0.5rem 1rem 0 1rem;
             text-align: center;
             position: relative;
             z-index: 5;
         }
 
         .globe-title {
-            color: #fbbc05;
-            font-size: 2.1rem;
+            color: #d97706; /* Ámbar-dorado cálido de alto contraste sobre fondo claro */
+            font-size: 2.2rem;
             font-weight: 300;
             margin: 0;
             letter-spacing: -0.5px;
             line-height: 1.2;
-            text-shadow: 0 2px 10px rgba(251, 188, 5, 0.2);
+            text-shadow: 0 1px 3px rgba(217, 119, 6, 0.2);
         }
 
         .globe-subtitle {
-            color: #94a3b8;
+            color: #475569; /* Gris pizarra legible y elegante */
             font-size: 0.95rem;
-            font-weight: 400;
-            margin: 0.45rem 0 0 0;
+            font-weight: 500;
+            margin: 0.4rem 0 0 0;
             letter-spacing: 0.2px;
         }
 
@@ -331,21 +329,30 @@
             position: relative;
             width: 100%;
             height: 380px;
-            overflow: hidden;
+            overflow: visible;
             touch-action: none;
             cursor: grab;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: transparent !important;
         }
         #globe-canvas-wrap:active {
             cursor: grabbing;
         }
+        #globe-canvas-wrap canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+            background: transparent !important;
+            outline: none;
+        }
 
+        /* Controles flotantes de cristal */
         .globe-controls {
             position: absolute;
-            top: 12px;
-            right: 12px;
+            top: 10px;
+            right: 10px;
             display: flex;
             flex-direction: column;
             gap: 6px;
@@ -353,9 +360,9 @@
         }
 
         .globe-btn {
-            background: rgba(6, 23, 51, 0.85);
-            color: #38bdf8;
-            border: 1px solid rgba(56, 189, 248, 0.35);
+            background: rgba(255, 255, 255, 0.9);
+            color: #093375;
+            border: 1px solid rgba(9, 51, 117, 0.18);
             border-radius: 8px;
             width: 32px;
             height: 32px;
@@ -366,15 +373,16 @@
             justify-content: center;
             cursor: pointer;
             backdrop-filter: blur(8px);
+            box-shadow: 0 4px 12px rgba(9, 51, 117, 0.08);
             transition: all 0.2s ease;
             padding: 0;
         }
 
         .globe-btn:hover {
-            background: #38bdf8;
-            color: #061733;
-            border-color: #38bdf8;
-            box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+            background: #093375;
+            color: #ffffff;
+            border-color: #093375;
+            box-shadow: 0 6px 16px rgba(9, 51, 117, 0.2);
             transform: scale(1.05);
         }
 
@@ -382,104 +390,108 @@
             width: auto;
             padding: 0 10px;
             font-size: 0.75rem;
-            font-weight: 500;
+            font-weight: 600;
             height: 28px;
         }
 
+        /* Etiqueta flotante de la Sede Oficial */
         #sede-label-overlay {
             position: absolute;
             transform: translate(-50%, 0);
             pointer-events: none;
-            background: rgba(6, 23, 51, 0.9);
-            color: #fbbf24;
-            border: 1px solid rgba(251, 188, 5, 0.5);
-            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #b45309;
+            border: 1px solid #f59e0b;
+            padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.72rem;
             font-weight: 600;
             white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            transition: opacity 0.25s ease;
+            box-shadow: 0 4px 14px rgba(9, 51, 117, 0.1);
+            transition: opacity 0.2s ease;
             z-index: 8;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
 
         .sede-dot-badge {
-            width: 6px;
-            height: 6px;
-            background: #fbbc05;
+            width: 7px;
+            height: 7px;
+            background: #f59e0b;
             border-radius: 50%;
             display: inline-block;
-            box-shadow: 0 0 8px #fbbc05;
+            box-shadow: 0 0 8px #f59e0b;
         }
 
+        /* Tooltip flotante de reseña de cliente */
         .globe-tooltip {
             position: absolute;
-            z-index: 25;
-            width: 250px;
-            background: rgba(6, 23, 51, 0.95);
-            border: 1px solid rgba(56, 189, 248, 0.5);
-            border-radius: 12px;
+            z-index: 30;
+            width: 260px;
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(9, 51, 117, 0.15);
+            border-radius: 14px;
             padding: 12px 14px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(12px);
-            color: #e2e8f0;
+            box-shadow: 0 15px 35px rgba(9, 51, 117, 0.14);
+            backdrop-filter: blur(14px);
+            color: #1a1a2e;
             pointer-events: auto;
             box-sizing: border-box;
             animation: fadeInTooltip 0.2s ease-out;
         }
 
-        @keyframes fadeInTooltip {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
         .globe-tooltip h4 {
             margin: 0;
             font-size: 0.92rem;
-            color: #ffffff;
-            font-weight: 600;
+            color: #093375;
+            font-weight: 700;
         }
 
         .tt-close-btn {
             background: none;
             border: none;
-            color: #94a3b8;
-            font-size: 1.1rem;
+            color: #64748b;
+            font-size: 1.2rem;
             cursor: pointer;
             padding: 0;
             line-height: 1;
         }
-        .tt-close-btn:hover { color: #ffffff; }
+        .tt-close-btn:hover { color: #093375; }
 
         .tt-city {
             font-size: 0.75rem;
-            color: #38bdf8;
+            color: #0284c7;
+            font-weight: 600;
             margin: 2px 0 6px 0;
         }
 
         .tt-stars {
             font-size: 0.85rem;
             letter-spacing: 2px;
+            color: #f59e0b;
             margin-bottom: 6px;
         }
 
         .tt-review {
             font-size: 0.78rem;
-            color: #cbd5e1;
+            color: #334155;
             margin: 0;
             font-style: italic;
             line-height: 1.35;
         }
 
+        /* Bloque Inferior: Tres Columnas Flotantes de Cristal */
         .globe-features-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            border-top: 1px solid rgba(56, 189, 248, 0.18);
-            background: rgba(4, 16, 38, 0.75);
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(9, 51, 117, 0.12);
+            border-radius: 20px;
             padding: 16px 10px;
+            box-shadow: 0 10px 30px rgba(9, 51, 117, 0.05);
+            margin-top: 10px;
             position: relative;
             z-index: 5;
         }
@@ -494,7 +506,7 @@
         }
 
         .globe-feat-col:not(:last-child) {
-            border-right: 1px solid rgba(56, 189, 248, 0.18);
+            border-right: 1px solid rgba(9, 51, 117, 0.12);
         }
 
         .feat-icon {
@@ -505,15 +517,15 @@
         }
 
         .feat-title {
-            color: #ffffff;
+            color: #093375;
             font-size: 0.92rem;
-            font-weight: 600;
+            font-weight: 700;
             margin: 0 0 4px 0;
-            letter-spacing: 0.2px;
+            letter-spacing: 0.1px;
         }
 
         .feat-desc {
-            color: #94a3b8;
+            color: #475569;
             font-size: 0.74rem;
             line-height: 1.35;
             margin: 0;
@@ -527,14 +539,13 @@
             }
             .globe-feat-col:not(:last-child) {
                 border-right: none;
-                border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+                border-bottom: 1px solid rgba(9, 51, 117, 0.12);
                 padding-bottom: 10px;
             }
             .globe-title {
                 font-size: 1.7rem;
             }
         }
-
     </style>
     <!-- Leaflet para el mapa interactivo de entrega y cálculo de ruta -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -1118,6 +1129,21 @@
                             inicializarMapaInteractivo();
                             if (deliveryMap) deliveryMap.invalidateSize();
                             actualizarDesgloseTransporte();
+                        }, 100);
+                    }
+                    if (viewId === 'landing-view') {
+                        setTimeout(() => {
+                            if (typeof asegurarInicioGlobo === 'function') asegurarInicioGlobo();
+                            if (globeRenderer && globeCamera) {
+                                const container = document.getElementById('globe-canvas-wrap');
+                                if (container) {
+                                    const w = container.clientWidth || 480;
+                                    const h = container.clientHeight || 380;
+                                    globeCamera.aspect = w / h;
+                                    globeCamera.updateProjectionMatrix();
+                                    globeRenderer.setSize(w, h);
+                                }
+                            }
                         }, 100);
                     }
                     void newView.offsetWidth;
@@ -1868,7 +1894,8 @@
     
 
 // ==============================================================================
-// GLOBO TERRÁQUEO 3D INTERACTIVO - FOOD4YOU
+// ==============================================================================
+// GLOBO TERRÁQUEO 3D INTERACTIVO FLOTANTE - FOOD4YOU
 // ==============================================================================
 const SPAIN_DOTS = [[36.2, -5.9], [36.2, -5.5], [36.6, -6.3], [36.6, -5.9], [36.6, -5.5], [36.6, -5.1], [36.6, -4.7], [37.0, -6.3], [37.0, -5.9], [37.0, -5.5], [37.0, -5.1], [37.0, -4.7], [37.0, -4.3], [37.0, -3.9], [37.0, -3.5], [37.0, -3.1], [37.0, -2.7], [37.0, -2.3], [37.4, -7.1], [37.4, -6.7], [37.4, -6.3], [37.4, -5.9], [37.4, -5.5], [37.4, -5.1], [37.4, -4.7], [37.4, -4.3], [37.4, -3.9], [37.4, -3.5], [37.4, -3.1], [37.4, -2.7], [37.4, -2.3], [37.4, -1.9], [37.8, -7.1], [37.8, -6.7], [37.8, -6.3], [37.8, -5.9], [37.8, -5.5], [37.8, -5.1], [37.8, -4.7], [37.8, -4.3], [37.8, -3.9], [37.8, -3.5], [37.8, -3.1], [37.8, -2.7], [37.8, -2.3], [37.8, -1.9], [37.8, -1.5], [37.8, -1.1], [38.2, -7.1], [38.2, -6.7], [38.2, -6.3], [38.2, -5.9], [38.2, -5.5], [38.2, -5.1], [38.2, -4.7], [38.2, -4.3], [38.2, -3.9], [38.2, -3.5], [38.2, -3.1], [38.2, -2.7], [38.2, -2.3], [38.2, -1.9], [38.2, -1.5], [38.2, -1.1], [38.2, -0.7], [38.6, -6.7], [38.6, -6.3], [38.6, -5.9], [38.6, -5.5], [38.6, -5.1], [38.6, -4.7], [38.6, -4.3], [38.6, -3.9], [38.6, -3.5], [38.6, -3.1], [38.6, -2.7], [38.6, -2.3], [38.6, -1.9], [38.6, -1.5], [38.6, -1.1], [38.6, -0.7], [38.6, -0.3], [39.0, -6.7], [39.0, -6.3], [39.0, -5.9], [39.0, -5.5], [39.0, -5.1], [39.0, -4.7], [39.0, -4.3], [39.0, -3.9], [39.0, -3.5], [39.0, -3.1], [39.0, -2.7], [39.0, -2.3], [39.0, -1.9], [39.0, -1.5], [39.0, -1.1], [39.0, -0.7], [39.0, -0.3], [39.0, 0.1], [39.4, -7.1], [39.4, -6.7], [39.4, -6.3], [39.4, -5.9], [39.4, -5.5], [39.4, -5.1], [39.4, -4.7], [39.4, -4.3], [39.4, -3.9], [39.4, -3.5], [39.4, -3.1], [39.4, -2.7], [39.4, -2.3], [39.4, -1.9], [39.4, -1.5], [39.4, -1.1], [39.4, -0.7], [39.4, -0.3], [39.4, 0.1], [39.8, -7.1], [39.8, -6.7], [39.8, -6.3], [39.8, -5.9], [39.8, -5.5], [39.8, -5.1], [39.8, -4.7], [39.8, -4.3], [39.8, -3.9], [39.8, -3.5], [39.8, -3.1], [39.8, -2.7], [39.8, -2.3], [39.8, -1.9], [39.8, -1.5], [39.8, -1.1], [39.8, -0.7], [39.8, -0.3], [40.2, -6.7], [40.2, -6.3], [40.2, -5.9], [40.2, -5.5], [40.2, -5.1], [40.2, -4.7], [40.2, -4.3], [40.2, -3.9], [40.2, -3.5], [40.2, -3.1], [40.2, -2.7], [40.2, -2.3], [40.2, -1.9], [40.2, -1.5], [40.2, -1.1], [40.2, -0.7], [40.2, -0.3], [40.2, 0.1], [40.6, -6.7], [40.6, -6.3], [40.6, -5.9], [40.6, -5.5], [40.6, -5.1], [40.6, -4.7], [40.6, -4.3], [40.6, -3.9], [40.6, -3.5], [40.6, -3.1], [40.6, -2.7], [40.6, -2.3], [40.6, -1.9], [40.6, -1.5], [40.6, -1.1], [40.6, -0.7], [40.6, -0.3], [40.6, 0.1], [40.6, 0.5], [41.0, -6.3], [41.0, -5.9], [41.0, -5.5], [41.0, -5.1], [41.0, -4.7], [41.0, -4.3], [41.0, -3.9], [41.0, -3.5], [41.0, -3.1], [41.0, -2.7], [41.0, -2.3], [41.0, -1.9], [41.0, -1.5], [41.0, -1.1], [41.0, -0.7], [41.0, -0.3], [41.0, 0.1], [41.0, 0.5], [41.0, 0.9], [41.4, -6.3], [41.4, -5.9], [41.4, -5.5], [41.4, -5.1], [41.4, -4.7], [41.4, -4.3], [41.4, -3.9], [41.4, -3.5], [41.4, -3.1], [41.4, -2.7], [41.4, -2.3], [41.4, -1.9], [41.4, -1.5], [41.4, -1.1], [41.4, -0.7], [41.4, -0.3], [41.4, 0.1], [41.4, 0.5], [41.4, 0.9], [41.4, 1.3], [41.4, 1.7], [41.4, 2.1], [41.8, -6.7], [41.8, -6.3], [41.8, -5.9], [41.8, -5.5], [41.8, -5.1], [41.8, -4.7], [41.8, -4.3], [41.8, -3.9], [41.8, -3.5], [41.8, -3.1], [41.8, -2.7], [41.8, -2.3], [41.8, -1.9], [41.8, -1.5], [41.8, -1.1], [41.8, -0.7], [41.8, -0.3], [41.8, 0.1], [41.8, 0.5], [41.8, 0.9], [41.8, 1.3], [41.8, 1.7], [41.8, 2.1], [41.8, 2.5], [42.2, -8.7], [42.2, -8.3], [42.2, -7.9], [42.2, -7.5], [42.2, -7.1], [42.2, -6.7], [42.2, -6.3], [42.2, -5.9], [42.2, -5.5], [42.2, -5.1], [42.2, -4.7], [42.2, -4.3], [42.2, -3.9], [42.2, -3.5], [42.2, -3.1], [42.2, -2.7], [42.2, -2.3], [42.2, -1.9], [42.2, -1.5], [42.2, -1.1], [42.2, -0.7], [42.2, -0.3], [42.2, 0.1], [42.2, 0.5], [42.2, 0.9], [42.2, 1.3], [42.2, 1.7], [42.2, 2.1], [42.2, 2.5], [42.2, 2.9], [42.6, -8.7], [42.6, -8.3], [42.6, -7.9], [42.6, -7.5], [42.6, -7.1], [42.6, -6.7], [42.6, -6.3], [42.6, -5.9], [42.6, -5.5], [42.6, -5.1], [42.6, -4.7], [42.6, -4.3], [42.6, -3.9], [42.6, -3.5], [42.6, -3.1], [42.6, -2.7], [42.6, -2.3], [42.6, -1.9], [42.6, -1.5], [42.6, -1.1], [42.6, -0.7], [42.6, -0.3], [42.6, 0.1], [42.6, 0.5], [42.6, 0.9], [42.6, 1.3], [43.0, -9.1], [43.0, -8.7], [43.0, -8.3], [43.0, -7.9], [43.0, -7.5], [43.0, -7.1], [43.0, -6.7], [43.0, -6.3], [43.0, -5.9], [43.0, -5.5], [43.0, -5.1], [43.0, -4.7], [43.0, -4.3], [43.0, -3.9], [43.0, -3.5], [43.0, -3.1], [43.0, -2.7], [43.0, -2.3], [43.0, -1.9], [43.0, -1.5], [43.4, -8.3], [43.4, -7.9], [43.4, -7.5], [43.4, -7.1], [43.4, -6.7], [43.4, -6.3], [43.4, -5.9], [43.4, -5.5], [43.4, -5.1], [43.4, -4.7], [43.4, -4.3], [43.4, -3.9], [43.4, -3.5], [39.6, 2.9], [39.7, 2.7], [39.5, 3.1], [39.9, 4.0], [38.9, 1.4], [28.3, -16.5], [28.1, -16.6], [28.0, -15.5], [28.1, -15.4], [29.0, -13.6], [28.4, -14.0], [28.6, -17.8], [27.8, -17.9]];
 
@@ -1877,7 +1904,8 @@ const SEDE_INFO = {
     label: "Nuestra sede oficial",
     city: "Arcos de la Frontera (Cádiz)",
     lat: 36.7486,
-    lon: -5.8115
+    lon: -5.8115,
+    isSede: true
 };
 
 const CLIENT_PINS = [
@@ -1900,17 +1928,18 @@ const CLIENT_PINS = [
     { name: "Sydney AI Hub", city: "Sídney, Australia", lat: -33.8688, lon: 151.2093, rating: 5, review: "Sustainable, efficient and futuristic appliances with top-tier customer care." }
 ];
 
+const GLOBE_RADIUS = 2.0;
 let globeScene, globeCamera, globeRenderer;
 let globeRootGroup;
 let isDraggingGlobe = false;
 let previousPointerPos = { x: 0, y: 0 };
 let globeRotationVelocity = { x: 0, y: 0 };
 let targetCameraZ = 4.6;
-let initialGlobeRotX = -0.32;
+let initialGlobeRotX = 0.35; // Centra España perfectamente
 let initialGlobeRotY = 0.05;
-const GLOBE_RADIUS = 2.0;
 let interactiveMarkers = [];
-let arcPulseTimes = [];
+let dragPointerMoved = 0;
+let pinchStartDistance = 0;
 
 function latLonToVector3(lat, lon, radius = GLOBE_RADIUS) {
     const phi = (lat) * (Math.PI / 180);
@@ -1921,40 +1950,68 @@ function latLonToVector3(lat, lon, radius = GLOBE_RADIUS) {
     return new THREE.Vector3(x, y, z);
 }
 
+// Comprobación activa de inicialización para evitar fallos de carga por CDN
+let intentosInicioGlobo = 0;
+function asegurarInicioGlobo() {
+    if (typeof THREE === 'undefined') {
+        intentosInicioGlobo++;
+        if (intentosInicioGlobo < 60) {
+            setTimeout(asegurarInicioGlobo, 50);
+        }
+        return;
+    }
+    init3DGlobe();
+}
+
 function init3DGlobe() {
     const container = document.getElementById('globe-canvas-wrap');
-    if (!container || typeof THREE === 'undefined' || globeRenderer) return;
+    if (!container || typeof THREE === 'undefined') return;
+    if (globeRenderer) {
+        // Si ya existe el renderer, ajustar tamaño y continuar
+        const w = container.clientWidth || 480;
+        const h = container.clientHeight || 380;
+        if (globeCamera) {
+            globeCamera.aspect = w / h;
+            globeCamera.updateProjectionMatrix();
+        }
+        globeRenderer.setSize(w, h);
+        return;
+    }
 
     const width = container.clientWidth || 480;
-    const height = container.clientHeight || 420;
+    const height = container.clientHeight || 380;
 
     globeScene = new THREE.Scene();
     globeCamera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
     globeCamera.position.set(0, 0, targetCameraZ);
 
-    globeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // Renderer 100% transparente para efecto flotante sin cuadro
+    globeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
     globeRenderer.setSize(width, height);
     globeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    globeRenderer.setClearColor(0x000000, 0); // Fondo totalmente transparente
     container.appendChild(globeRenderer.domElement);
 
     globeRootGroup = new THREE.Group();
+    // Posición del centro del globo ligeramente bajada para que corte en el borde inferior
+    globeRootGroup.position.set(0, -0.65, 0);
     globeRootGroup.rotation.x = initialGlobeRotX;
     globeRootGroup.rotation.y = initialGlobeRotY;
     globeScene.add(globeRootGroup);
 
-    // 1. Esfera interior oscura con brillo sutil
-    const sphereGeo = new THREE.SphereGeometry(GLOBE_RADIUS * 0.992, 48, 48);
+    // 1. Esfera interior sutil y translúcida (da profundidad 3D sin cuadro oscuro)
+    const sphereGeo = new THREE.SphereGeometry(GLOBE_RADIUS * 0.995, 48, 48);
     const sphereMat = new THREE.MeshBasicMaterial({
-        color: 0x051329,
+        color: 0x093375,
         transparent: true,
-        opacity: 0.9
+        opacity: 0.03,
+        depthWrite: false
     });
     const innerSphere = new THREE.Mesh(sphereGeo, sphereMat);
     globeRootGroup.add(innerSphere);
 
-    // 2. Malla fina de meridianos y paralelos en azul tenue
+    // 2. Malla fina de meridianos y paralelos en azul tecnológico
     const gridGroup = new THREE.Group();
-    // Paralelos (latitudes cada 15 grados)
     for (let lat = -75; lat <= 75; lat += 15) {
         const phi = lat * (Math.PI / 180);
         const rRing = GLOBE_RADIUS * Math.cos(phi);
@@ -1966,10 +2023,9 @@ function init3DGlobe() {
             points.push(new THREE.Vector3(rRing * Math.sin(theta), yRing, rRing * Math.cos(theta)));
         }
         ringGeo.setFromPoints(points);
-        const line = new THREE.Line(ringGeo, new THREE.LineBasicMaterial({ color: 0x1d3a66, transparent: true, opacity: 0.45 }));
+        const line = new THREE.Line(ringGeo, new THREE.LineBasicMaterial({ color: 0x093375, transparent: true, opacity: 0.22 }));
         gridGroup.add(line);
     }
-    // Meridianos (longitudes cada 15 grados)
     for (let lon = 0; lon < 360; lon += 15) {
         const theta = lon * (Math.PI / 180);
         const ringGeo = new THREE.BufferGeometry();
@@ -1982,21 +2038,22 @@ function init3DGlobe() {
             points.push(new THREE.Vector3(x, y, z));
         }
         ringGeo.setFromPoints(points);
-        const line = new THREE.Line(ringGeo, new THREE.LineBasicMaterial({ color: 0x1d3a66, transparent: true, opacity: 0.45 }));
+        const line = new THREE.Line(ringGeo, new THREE.LineBasicMaterial({ color: 0x093375, transparent: true, opacity: 0.22 }));
         gridGroup.add(line);
     }
     globeRootGroup.add(gridGroup);
 
     // 3. Círculo exterior sutil que marca el contorno
-    const outerRimGeo = new THREE.RingGeometry(GLOBE_RADIUS * 1.001, GLOBE_RADIUS * 1.025, 64);
-    const outerRimMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.28, side: THREE.DoubleSide });
+    const outerRimGeo = new THREE.RingGeometry(GLOBE_RADIUS * 1.002, GLOBE_RADIUS * 1.018, 64);
+    const outerRimMat = new THREE.MeshBasicMaterial({ color: 0x093375, transparent: true, opacity: 0.18, side: THREE.DoubleSide });
     const outerRim = new THREE.Mesh(outerRimGeo, outerRimMat);
-    globeScene.add(outerRim); // Fijo en el plano de la cámara
+    outerRim.position.set(0, -0.65, 0); // Alineado con el centro del globo
+    globeScene.add(outerRim);
 
-    // 4. Dot-matrix SOLO para España
+    // 4. Dot-matrix SOLO para España (azul intenso nítido)
     const dotCoords = [];
     const dotColors = [];
-    const colorPoint = new THREE.Color(0x38bdf8); // Azul celeste tecnológico
+    const colorPoint = new THREE.Color(0x0284c7); // Azul intenso visible sobre fondo blanco/claro
 
     SPAIN_DOTS.forEach(d => {
         const v = latLonToVector3(d[0], d[1], GLOBE_RADIUS * 1.005);
@@ -2008,10 +2065,9 @@ function init3DGlobe() {
     dotGeo.setAttribute('position', new THREE.Float32BufferAttribute(dotCoords, 3));
     dotGeo.setAttribute('color', new THREE.Float32BufferAttribute(dotColors, 3));
 
-    // Canvas circular para texturas de puntos suaves
-    const dotTexture = createCircleTexture('#38bdf8');
+    const dotTexture = createCircleTexture('#0284c7');
     const dotMat = new THREE.PointsMaterial({
-        size: 0.045,
+        size: 0.05,
         map: dotTexture,
         transparent: true,
         vertexColors: true,
@@ -2020,32 +2076,40 @@ function init3DGlobe() {
     const spainPoints = new THREE.Points(dotGeo, dotMat);
     globeRootGroup.add(spainPoints);
 
-    // 5. Marcador SEDE en Cádiz (Destacado, más grande, en amarillo con etiqueta)
+    // 5. Marcador SEDE en Cádiz (Destacado, más grande, en amarillo dorado con anillo palpitante)
     const sedePos = latLonToVector3(SEDE_INFO.lat, SEDE_INFO.lon, GLOBE_RADIUS * 1.01);
     const sedeGeo = new THREE.SphereGeometry(0.065, 16, 16);
-    const sedeMat = new THREE.MeshBasicMaterial({ color: 0xfbbc05 });
+    const sedeMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
     const sedeMesh = new THREE.Mesh(sedeGeo, sedeMat);
     sedeMesh.position.copy(sedePos);
     globeRootGroup.add(sedeMesh);
 
     // Anillo palpitante de la sede
-    const ringPulseGeo = new THREE.RingGeometry(0.07, 0.12, 32);
-    const ringPulseMat = new THREE.MeshBasicMaterial({ color: 0xfbbc05, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+    const ringPulseGeo = new THREE.RingGeometry(0.07, 0.13, 32);
+    const ringPulseMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
     const sedePulseMesh = new THREE.Mesh(ringPulseGeo, ringPulseMat);
     sedePulseMesh.position.copy(sedePos);
     sedePulseMesh.lookAt(new THREE.Vector3(0, 0, 0));
     globeRootGroup.add(sedePulseMesh);
 
+    // Hit sphere invisible para hacer clic fácil
+    const hitGeo = new THREE.SphereGeometry(0.14, 8, 8);
+    const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+    const sedeHitMesh = new THREE.Mesh(hitGeo, hitMat);
+    sedeHitMesh.position.copy(sedePos);
+    globeRootGroup.add(sedeHitMesh);
+
     interactiveMarkers.push({
         mesh: sedeMesh,
+        hitMesh: sedeHitMesh,
         pulseMesh: sedePulseMesh,
         info: SEDE_INFO,
         isSede: true
     });
 
     // 6. Marcadores Clientes en España y en el resto del mundo
-    const clientMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-    const clientGeo = new THREE.SphereGeometry(0.04, 16, 16);
+    const clientMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+    const clientGeo = new THREE.SphereGeometry(0.042, 16, 16);
 
     CLIENT_PINS.forEach((client, idx) => {
         const cPos = latLonToVector3(client.lat, client.lon, GLOBE_RADIUS * 1.01);
@@ -2053,20 +2117,24 @@ function init3DGlobe() {
         cMesh.position.copy(cPos);
         globeRootGroup.add(cMesh);
 
+        const cHitMesh = new THREE.Mesh(hitGeo, hitMat);
+        cHitMesh.position.copy(cPos);
+        globeRootGroup.add(cHitMesh);
+
         interactiveMarkers.push({
             mesh: cMesh,
+            hitMesh: cHitMesh,
             info: client,
             isSede: false
         });
 
-        // Arcos de conexión entre Sede y Clientes con animación de pulso
         crearArcoConexion(sedePos, cPos, idx);
     });
 
     // 7. Eventos de interacción
     setupGlobeInteraction(container);
 
-    // 8. Bucle de renderizado
+    // 8. Bucle de animación continuo
     animateGlobe();
 }
 
@@ -2077,7 +2145,7 @@ function createCircleTexture(colorHex) {
     const ctx = canvas.getContext('2d');
     const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
     grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.35, colorHex);
+    grad.addColorStop(0.4, colorHex);
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -2096,103 +2164,141 @@ function crearArcoConexion(startVec, endVec, index) {
     const curve = new THREE.QuadraticBezierCurve3D(startVec, mid, endVec);
     const points = curve.getPoints(40);
     const curveGeo = new THREE.BufferGeometry().setFromPoints(points);
-    const curveMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.28 });
+    const curveMat = new THREE.LineBasicMaterial({ color: 0x0284c7, transparent: true, opacity: 0.32 });
     const line = new THREE.Line(curveGeo, curveMat);
     globeRootGroup.add(line);
 
     // Partícula viajera
-    const pulseMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd });
-    const pulseGeo = new THREE.SphereGeometry(0.02, 8, 8);
+    const pulseMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+    const pulseGeo = new THREE.SphereGeometry(0.022, 8, 8);
     const pulseMesh = new THREE.Mesh(pulseGeo, pulseMat);
     globeRootGroup.add(pulseMesh);
 
     animatedArcs.push({
         curve: curve,
         pulseMesh: pulseMesh,
-        speed: 0.006 + ((index % 5) * 0.002),
-        offset: (index * 0.13) % 1.0
+        speed: 0.005 + ((index % 5) * 0.002),
+        offset: (index * 0.14) % 1.0
     });
 }
 
 function setupGlobeInteraction(container) {
-    // Arrastre con ratón / táctil
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    // Arrastre con ratón y pantalla táctil
     container.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('button') || e.target.closest('#globe-tooltip')) return;
         isDraggingGlobe = true;
+        dragPointerMoved = 0;
         previousPointerPos = { x: e.clientX, y: e.clientY };
         globeRotationVelocity = { x: 0, y: 0 };
+        try {
+            container.setPointerCapture(e.pointerId);
+        } catch(err) {}
     });
 
     window.addEventListener('pointermove', (e) => {
         if (!isDraggingGlobe || !globeRootGroup) return;
         const deltaX = e.clientX - previousPointerPos.x;
         const deltaY = e.clientY - previousPointerPos.y;
+        dragPointerMoved += Math.abs(deltaX) + Math.abs(deltaY);
         previousPointerPos = { x: e.clientX, y: e.clientY };
 
-        globeRootGroup.rotation.y += deltaX * 0.005;
-        globeRootGroup.rotation.x += deltaY * 0.005;
+        globeRootGroup.rotation.y += deltaX * 0.0055;
+        globeRootGroup.rotation.x += deltaY * 0.0055;
+        globeRootGroup.rotation.x = Math.max(-1.1, Math.min(1.1, globeRootGroup.rotation.x));
 
-        // Limitar inclinación vertical
-        globeRootGroup.rotation.x = Math.max(-1.2, Math.min(1.2, globeRootGroup.rotation.x));
-
-        globeRotationVelocity = { x: deltaY * 0.005, y: deltaX * 0.005 };
+        globeRotationVelocity = { x: deltaY * 0.0055, y: deltaX * 0.0055 };
     });
 
-    window.addEventListener('pointerup', () => {
-        isDraggingGlobe = false;
-    });
+    const finishPointer = (e) => {
+        if (isDraggingGlobe) {
+            isDraggingGlobe = false;
+            try {
+                container.releasePointerCapture(e.pointerId);
+            } catch(err) {}
+        }
+    };
 
-    // Zoom con rueda de ratón
+    window.addEventListener('pointerup', finishPointer);
+    window.addEventListener('pointercancel', finishPointer);
+
+    // Zoom con rueda del ratón
     container.addEventListener('wheel', (e) => {
         e.preventDefault();
         targetCameraZ += e.deltaY * 0.0025;
         targetCameraZ = Math.max(2.8, Math.min(7.5, targetCameraZ));
     }, { passive: false });
 
-    // Clic / Hover sobre pines
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
+    // Zoom con gesto de pellizco en dispositivos móviles táctiles
+    container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            pinchStartDistance = Math.hypot(dx, dy);
+        }
+    }, { passive: true });
 
+    container.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && pinchStartDistance > 0) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const dist = Math.hypot(dx, dy);
+            const delta = pinchStartDistance - dist;
+            targetCameraZ += delta * 0.008;
+            targetCameraZ = Math.max(2.8, Math.min(7.5, targetCameraZ));
+            pinchStartDistance = dist;
+        }
+    }, { passive: true });
+
+    // Detección de paso de ratón (hover) sobre pines
     container.addEventListener('pointermove', (e) => {
-        if (isDraggingGlobe) return;
+        if (isDraggingGlobe || !globeCamera) return;
         const rect = container.getBoundingClientRect();
         mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
         raycaster.setFromCamera(mouse, globeCamera);
-        const meshesToCheck = interactiveMarkers.map(m => m.mesh);
+        const meshesToCheck = interactiveMarkers.map(m => m.hitMesh || m.mesh);
         const intersects = raycaster.intersectObjects(meshesToCheck);
 
         if (intersects.length > 0) {
-            const hitMesh = intersects[0].object;
-            const markerObj = interactiveMarkers.find(m => m.mesh === hitMesh);
-            if (markerObj) {
-                // Comprobar que no esté en la cara posterior
-                const worldPos = new THREE.Vector3();
-                hitMesh.getWorldPosition(worldPos);
-                if (worldPos.z > 0.1) {
-                    mostrarTooltipResena(markerObj.info, e.clientX, e.clientY);
+            const hit = intersects[0].object;
+            const marker = interactiveMarkers.find(m => m.hitMesh === hit || m.mesh === hit);
+            if (marker) {
+                const wp = new THREE.Vector3();
+                marker.mesh.getWorldPosition(wp);
+                if (wp.z > 0.05) {
+                    mostrarTooltipResena(marker.info, e.clientX, e.clientY);
                     container.style.cursor = 'pointer';
                     return;
                 }
             }
         }
-        container.style.cursor = isDraggingGlobe ? 'grabbing' : 'grab';
+        container.style.cursor = 'grab';
     });
 
+    // Clic sobre pines (solo si no fue un arrastre de rotación)
     container.addEventListener('click', (e) => {
+        if (dragPointerMoved > 8 || !globeCamera) return;
         const rect = container.getBoundingClientRect();
         mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
         raycaster.setFromCamera(mouse, globeCamera);
-        const meshesToCheck = interactiveMarkers.map(m => m.mesh);
+        const meshesToCheck = interactiveMarkers.map(m => m.hitMesh || m.mesh);
         const intersects = raycaster.intersectObjects(meshesToCheck);
 
         if (intersects.length > 0) {
-            const hitMesh = intersects[0].object;
-            const markerObj = interactiveMarkers.find(m => m.mesh === hitMesh);
-            if (markerObj) {
-                mostrarTooltipResena(markerObj.info, e.clientX, e.clientY);
+            const hit = intersects[0].object;
+            const marker = interactiveMarkers.find(m => m.hitMesh === hit || m.mesh === hit);
+            if (marker) {
+                const wp = new THREE.Vector3();
+                marker.mesh.getWorldPosition(wp);
+                if (wp.z > 0.05) {
+                    mostrarTooltipResena(marker.info, e.clientX, e.clientY);
+                }
             }
         }
     });
@@ -2222,23 +2328,24 @@ function mostrarTooltipResena(info, clientX, clientY) {
     
     const starsEl = document.getElementById('tt-stars');
     if (info.isSede) {
-        starsEl.innerHTML = '<span style="color:#fbbc05; font-weight:bold;">★ Sede Central Oficial</span>';
+        starsEl.innerHTML = '<span style="color:#f59e0b; font-weight:bold;">★ Sede Central Oficial</span>';
         document.getElementById('tt-review').textContent = "Centro de operaciones de Food4You en Cádiz. Coordinación de menús saludables, logística y tecnología culinaria.";
     } else {
         let starsStr = '';
         for (let i = 0; i < (info.rating || 5); i++) starsStr += '★';
-        starsEl.innerHTML = `<span style="color:#fbbc05;">${starsStr}</span>`;
+        starsEl.innerHTML = `<span style="color:#f59e0b;">${starsStr}</span>`;
         document.getElementById('tt-review').textContent = `"${info.review}"`;
     }
 
     tt.style.display = 'block';
     const container = document.getElementById('globe-canvas-wrap');
+    if (!container) return;
     const rect = container.getBoundingClientRect();
     
     let x = clientX - rect.left + 15;
     let y = clientY - rect.top - 20;
 
-    if (x + 260 > rect.width) x = rect.width - 270;
+    if (x + 270 > rect.width) x = rect.width - 280;
     if (y + 160 > rect.height) y = rect.height - 170;
     if (x < 10) x = 10;
     if (y < 10) y = 10;
@@ -2263,11 +2370,11 @@ function animateGlobe() {
     if (!isDraggingGlobe && globeRootGroup) {
         globeRootGroup.rotation.y += globeRotationVelocity.y;
         globeRootGroup.rotation.x += globeRotationVelocity.x;
-        globeRotationVelocity.x *= 0.93;
-        globeRotationVelocity.y *= 0.93;
+        globeRotationVelocity.x *= 0.92;
+        globeRotationVelocity.y *= 0.92;
 
         // Rotación sutil automática
-        globeRootGroup.rotation.y += 0.001;
+        globeRootGroup.rotation.y += 0.0008;
     }
 
     // Suavizado de zoom
@@ -2280,14 +2387,22 @@ function animateGlobe() {
         a.pulseMesh.position.copy(pt);
     });
 
-    // Palpitación de la sede
-    const sedeObj = interactiveMarkers.find(m => m.isSede);
-    if (sedeObj && sedeObj.pulseMesh) {
-        const scale = 1.0 + 0.3 * Math.sin(clockTime * 4);
-        sedeObj.pulseMesh.scale.set(scale, scale, scale);
-    }
+    // Visibilidad y palpitación de la sede y pines (ocultar en cara posterior)
+    interactiveMarkers.forEach(m => {
+        const wp = new THREE.Vector3();
+        m.mesh.getWorldPosition(wp);
+        const isFront = wp.z > 0.05;
+        m.mesh.visible = isFront;
+        if (m.hitMesh) m.hitMesh.visible = isFront;
+        if (m.pulseMesh) {
+            m.pulseMesh.visible = isFront;
+            if (isFront) {
+                const scale = 1.0 + 0.3 * Math.sin(clockTime * 4);
+                m.pulseMesh.scale.set(scale, scale, scale);
+            }
+        }
+    });
 
-    // Actualizar visibilidad de etiqueta flotante de la Sede
     actualizarSedeLabelOverlay();
 
     globeRenderer.render(globeScene, globeCamera);
@@ -2301,8 +2416,7 @@ function actualizarSedeLabelOverlay() {
     const wp = new THREE.Vector3();
     sedeObj.mesh.getWorldPosition(wp);
 
-    // Ocultar si está en la cara posterior
-    if (wp.z <= 0.0) {
+    if (wp.z <= 0.05) {
         label.style.opacity = '0';
         return;
     }
@@ -2320,13 +2434,12 @@ function actualizarSedeLabelOverlay() {
     label.style.opacity = '1';
 }
 
-
-// Iniciar globo al cargar y adaptar al redimensionar
+// Iniciar globo con reintentos para asegurar carga incluso con retardo del CDN
 window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(init3DGlobe, 100);
+    asegurarInicioGlobo();
 });
 window.addEventListener('load', () => {
-    setTimeout(init3DGlobe, 200);
+    asegurarInicioGlobo();
 });
 window.addEventListener('resize', () => {
     if (!globeRenderer || !globeCamera) return;
