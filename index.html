@@ -1955,31 +1955,48 @@ let intentosInicioGlobo = 0;
 function asegurarInicioGlobo() {
     if (typeof THREE === 'undefined') {
         intentosInicioGlobo++;
-        if (intentosInicioGlobo < 60) {
+        if (intentosInicioGlobo < 100) {
             setTimeout(asegurarInicioGlobo, 50);
+        } else {
+            console.warn('[Globe] Three.js no cargó tras 5s. Revisar CDN.');
         }
         return;
     }
+    intentosInicioGlobo = 0; // reset para futuras llamadas
     init3DGlobe();
 }
 
 function init3DGlobe() {
     const container = document.getElementById('globe-canvas-wrap');
     if (!container || typeof THREE === 'undefined') return;
+    // Guard: si el canvas ya existe pero fue desconectado del DOM, reiniciar
     if (globeRenderer) {
-        // Si ya existe el renderer, ajustar tamaño y continuar
-        const w = container.clientWidth || 480;
-        const h = container.clientHeight || 380;
-        if (globeCamera) {
-            globeCamera.aspect = w / h;
-            globeCamera.updateProjectionMatrix();
+        if (!container.contains(globeRenderer.domElement)) {
+            // Canvas fue desconectado — forzar reinicio completo
+            globeRenderer.dispose();
+            globeRenderer = null;
+            globeScene = null;
+            globeCamera = null;
+        } else {
+            const w = container.clientWidth || 480;
+            const h = container.clientHeight || 380;
+            if (globeCamera) {
+                globeCamera.aspect = w / h;
+                globeCamera.updateProjectionMatrix();
+            }
+            globeRenderer.setSize(w, h);
+            return;
         }
-        globeRenderer.setSize(w, h);
-        return;
     }
 
     const width = container.clientWidth || 480;
     const height = container.clientHeight || 380;
+
+    // Guard: si el contenedor aún no tiene tamaño visible, reintentar más tarde
+    if (width === 0 || height === 0) {
+        setTimeout(asegurarInicioGlobo, 200);
+        return;
+    }
 
     globeScene = new THREE.Scene();
     globeCamera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
@@ -2161,7 +2178,7 @@ function crearArcoConexion(startVec, endVec, index) {
     const altitude = 1.08 + (dist * 0.15);
     mid.normalize().multiplyScalar(GLOBE_RADIUS * altitude);
 
-    const curve = new THREE.QuadraticBezierCurve3D(startVec, mid, endVec);
+    const curve = new THREE.QuadraticBezierCurve3(startVec, mid, endVec);
     const points = curve.getPoints(40);
     const curveGeo = new THREE.BufferGeometry().setFromPoints(points);
     const curveMat = new THREE.LineBasicMaterial({ color: 0x0284c7, transparent: true, opacity: 0.32 });
