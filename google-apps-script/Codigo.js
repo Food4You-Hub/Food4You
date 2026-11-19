@@ -111,6 +111,7 @@ function doPost(e) {
     var clientEmail = data.clientEmail;
     var clientNif = data.clientNif || "";
     var clientTel = data.clientTel || "";
+    var clientIban = data.clientIban || "";
     var clientDireccion = data.clientDireccion || "";
     var pedidoNum = data.pedidoNum || ("P-" + new Date().getFullYear());
     var facturaNum = data.facturaNum || "";
@@ -165,6 +166,7 @@ function doPost(e) {
       facturaNum: facturaNum,
       fecha: fecha,
       totalAmount: totalAmount.toFixed(2),
+      clientIban: clientIban,
       fileName: fileName,
       transporte: transporte
     });
@@ -382,6 +384,8 @@ function generarPlantillaHtmlEmail(info) {
           <div class="info-row"><span>Número de Pedido:</span> <strong>${info.pedidoNum}</strong></div>
           ${info.facturaNum ? `<div class="info-row"><span>Factura Emitida:</span> <strong>${info.facturaNum}</strong></div>` : ''}
           <div class="info-row"><span>Fecha:</span> <span>${info.fecha}</span></div>
+          ${info.clientIban ? `<div class="info-row"><span>Cuenta Corriente (cobro):</span> <strong>${info.clientIban}</strong></div>` : ''}
+          <div class="info-row"><span>Vencimiento de pago:</span> <span>7 días</span></div>
           <div class="info-row"><span>Importe Total:</span> <span>${info.totalAmount} €</span></div>
         </div>
 
